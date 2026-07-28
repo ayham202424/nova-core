@@ -1,0 +1,86 @@
+const { SlashCommandBuilder } = require('discord.js');
+const config = require('../config');
+const { hasRank, getRank, RANKS } = require('../utils/permissions');
+const { baseEmbed, THEME } = require('../utils/embeds');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ban')
+    .setDescription('Ban a member from the server.')
+    .addUserOption((opt) => opt.setName('user').setDescription('The member to ban').setRequired(true))
+    .addStringOption((opt) => opt.setName('reason').setDescription('Why are you banning this user?').setRequired(true))
+    .addAttachmentOption((opt) => opt.setName('proof').setDescription('Screenshot or file as proof').setRequired(false)),
+
+  async execute(interaction) {
+    const staffMember = interaction.member;
+    if (!hasRank(staffMember, RANKS.MOD)) {
+      return interaction.reply({ content: 'You need at least Mod rank to use this command.', ephemeral: true });
+    }
+
+    const targetUser = interaction.options.getUser('user');
+    const reason = interaction.options.getString('reason');
+    const proof = interaction.options.getAttachment('proof');
+
+    const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+    if (targetMember && getRank(targetMember) >= getRank(staffMember) && staffMember.id !== interaction.guild.ownerId) {
+      return interaction.reply({ content: 'You cannot ban a staff member of equal or higher rank.', ephemeral: true });
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    let dmSent = true;
+    try {
+      const dmEmbed = baseEmbed(interaction.client, {
+        color: THEME.colors.danger,
+        title: '🔨 You Have Been Banned',
+        description:
+          `You have been banned from **Nova-Creations**.\n\n` +
+          `**Reason:** ${reason}\n` +
+          `**Issued by:** ${staffMember.user.tag}\n` +
+          (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
+          `\n\nIf you believe this was a mistake, you can submit a ban appeal (coming soon).`,
+      });
+      await targetUser.send({ embeds: [dmEmbed] });
+    } catch (err) {
+      dmSent = false;
+    }
+
+    let banned = true;
+    try {
+      await interaction.guild.bans.create(targetUser.id, { reason });
+    } catch (err) {
+      banned = false;
+      console.error('Failed to ban member:', err);
+    }
+
+    try {
+      const logChannel = await interaction.client.channels.fetch(config.channels.cmdsLogs);
+      const logEmbed = baseEmbed(interaction.client, {
+        color: THEME.colors.danger,
+        authorName: targetUser.tag,
+        authorIcon: targetUser.displayAvatarURL(),
+        title: banned ? '🔨 Member Banned' : '⚠️ Ban Failed',
+        description:
+          `**User:** ${targetUser} (\`${targetUser.id}\`)\n` +
+          `**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)\n` +
+          `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
+        fields: [{ name: 'Reason', value: reason }],
+        image: proof ? proof.url : null,
+      });
+      await logChannel.send({ embeds: [logEmbed] });
+    } catch (err) {
+      console.error('Failed to log ban:', err);
+    }
+
+    if (!banned) {
+      return interaction.editReply({ content: 'Failed to ban — check my role position and permissions.' });
+    }
+
+    const confirmEmbed = baseEmbed(interaction.client, {
+      color: THEME.colors.danger,
+      title: '🔨 Ban Applied',
+      description: `${targetUser.tag} has been banned.`,
+    });
+    await interaction.editReply({ embeds: [confirmEmbed] });
+  },
+};

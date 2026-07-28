@@ -47,4 +47,22 @@ function setVerified(userId, value = 1) {
   db.prepare('UPDATE users SET verified = ? WHERE user_id = ?').run(value, userId);
 }
 
-module.exports = { db, getOrCreateUser, setVerified };
+function addWarn({ userId, moderatorId, reason, proofUrl, warnType, timeoutMinutes }) {
+  getOrCreateUser(userId);
+  db.prepare(
+    `INSERT INTO warns (user_id, moderator_id, reason, proof_url, warn_type, timeout_minutes, timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(userId, moderatorId, reason, proofUrl || null, warnType, timeoutMinutes, new Date().toISOString());
+  db.prepare('UPDATE users SET warns_count = warns_count + 1 WHERE user_id = ?').run(userId);
+}
+
+function getWarnCount(userId) {
+  const user = getOrCreateUser(userId);
+  return user.warns_count;
+}
+
+function getWarns(userId) {
+  return db.prepare('SELECT * FROM warns WHERE user_id = ? ORDER BY id DESC').all(userId);
+}
+
+module.exports = { db, getOrCreateUser, setVerified, addWarn, getWarnCount, getWarns };
