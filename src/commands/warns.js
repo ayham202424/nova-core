@@ -27,8 +27,8 @@ module.exports = {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    const fields = warns.slice(0, 10).map((w, i) => ({
-      name: `#${warns.length - i} — ${w.warn_type}`,
+    const fields = warns.slice(0, 10).map((w) => ({
+      name: `Warn ID: ${w.id} — ${w.warn_type}`,
       value:
         `**Reason:** ${w.reason}\n` +
         `**Moderator:** <@${w.moderator_id}>\n` +
@@ -42,6 +42,7 @@ module.exports = {
       authorName: targetUser.tag,
       authorIcon: targetUser.displayAvatarURL(),
       title: `Warning History (${warns.length} total)`,
+      description: 'Use `/unwarn warnid:<id>` to remove a specific warning.',
       fields,
     });
 

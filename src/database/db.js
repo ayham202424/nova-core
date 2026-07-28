@@ -65,4 +65,33 @@ function getWarns(userId) {
   return db.prepare('SELECT * FROM warns WHERE user_id = ? ORDER BY id DESC').all(userId);
 }
 
-module.exports = { db, getOrCreateUser, setVerified, addWarn, getWarnCount, getWarns };
+function getWarnById(warnId) {
+  return db.prepare('SELECT * FROM warns WHERE id = ?').get(warnId);
+}
+
+function removeWarn(warnId) {
+  const warn = getWarnById(warnId);
+  if (!warn) return null;
+  db.prepare('DELETE FROM warns WHERE id = ?').run(warnId);
+  db.prepare('UPDATE users SET warns_count = MAX(warns_count - 1, 0) WHERE user_id = ?').run(warn.user_id);
+  return warn;
+}
+
+function clearWarns(userId) {
+  const count = db.prepare('SELECT COUNT(*) as c FROM warns WHERE user_id = ?').get(userId).c;
+  db.prepare('DELETE FROM warns WHERE user_id = ?').run(userId);
+  db.prepare('UPDATE users SET warns_count = 0 WHERE user_id = ?').run(userId);
+  return count;
+}
+
+module.exports = {
+  db,
+  getOrCreateUser,
+  setVerified,
+  addWarn,
+  getWarnCount,
+  getWarns,
+  getWarnById,
+  removeWarn,
+  clearWarns,
+};

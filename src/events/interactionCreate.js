@@ -1,5 +1,7 @@
 const { Events } = require('discord.js');
 const verifyHandler = require('../handlers/verifyHandler');
+const dmHandler = require('../handlers/dmHandler');
+const dmMenuHandler = require('../handlers/dmMenuHandler');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -23,8 +25,26 @@ module.exports = {
       return;
     }
 
-    if (interaction.isButton() && interaction.customId === 'verify_accept') {
-      await verifyHandler.handleAccept(interaction);
+    if (interaction.isButton()) {
+      if (interaction.customId === 'verify_accept') {
+        return verifyHandler.handleAccept(interaction);
+      }
+      if (interaction.customId.startsWith('staff_dm_open_')) {
+        return dmHandler.openModal(interaction);
+      }
+      if (interaction.customId.startsWith('dm_menu_')) {
+        return dmMenuHandler.handleButton(interaction);
+      }
+      return;
+    }
+
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('staff_dm_modal_')) {
+        return dmHandler.submitModal(interaction);
+      }
+      if (interaction.customId === 'dm_contact_owner_modal') {
+        return dmMenuHandler.handleContactModal(interaction);
+      }
     }
   },
 };
