@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node src/index.js",
     "deploy-commands": "node src/deploy-commands.js",
-    "post-verify-message": "node scripts/post-verify-message.js"
+    "post-verify-message": "node scripts/post-verify-message.js",
+    "post-staff-guide": "node scripts/post-staff-guide.js",
+    "post-cmds-guide": "node scripts/post-cmds-guide.js",
+    "post-help-guide": "node scripts/post-help-guide.js"
   },
   "engines": {
     "node": ">=18.0.0"
