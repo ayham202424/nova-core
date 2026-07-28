@@ -1,5 +1,6 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events } = require('discord.js');
 const config = require('../config');
+const { THEME, baseEmbed } = require('../utils/embeds');
 
 const PROTECTED_LOG_CHANNELS = [
   config.channels.messageLogs,
@@ -12,10 +13,10 @@ module.exports = {
   name: Events.MessageCreate,
   once: false,
   async execute(message) {
-    if (message.author.bot) return; // allows the bot's own log messages through
+    if (message.author.bot) return;
     if (!PROTECTED_LOG_CHANNELS.includes(message.channelId)) return;
 
-    const attemptedContent = message.content || '[no text content — attachment, image, or embed only]';
+    const attemptedContent = message.content || '*[no text content — attachment, image, or embed only]*';
     const sourceChannelId = message.channelId;
 
     try {
@@ -26,16 +27,15 @@ module.exports = {
 
     let dmSent = true;
     try {
-      const warnEmbed = new EmbedBuilder()
-        .setColor(0xd94141)
-        .setTitle('Message Removed — Read-Only Channel')
-        .setDescription(
-          `Your message in <#${sourceChannelId}> was automatically deleted.\n\n` +
-            '**Reason:** Log channels are read-only for everyone, including staff and the owner. ' +
-            'They exist purely as an automated record and cannot be used to send messages.'
-        )
-        .addFields({ name: 'Your message (proof)', value: attemptedContent.slice(0, 1000) })
-        .setTimestamp();
+      const warnEmbed = baseEmbed(message.client, {
+        color: THEME.colors.danger,
+        title: '🌙 Message Removed — Read-Only Channel',
+        description:
+          `Your message in <#${sourceChannelId}> was automatically removed.\n\n` +
+          '**Reason:** Log channels are read-only for everyone, including staff and the owner. ' +
+          'They exist purely as an automated record.',
+        fields: [{ name: 'Your message (proof)', value: attemptedContent.slice(0, 1000) }],
+      });
 
       await message.author.send({ embeds: [warnEmbed] });
     } catch (err) {
@@ -45,17 +45,19 @@ module.exports = {
 
     try {
       const logChannel = await message.client.channels.fetch(config.channels.messageLogs);
-      const incidentEmbed = new EmbedBuilder()
-        .setColor(0xd94141)
-        .setTitle('Protected Channel — Write Attempt Blocked')
-        .setDescription(
-          `**User:** ${message.author.tag} (${message.author.id})\n` +
-            `**Attempted channel:** <#${sourceChannelId}>\n` +
-            '**Action:** Message deleted automatically\n' +
-            `**User notified via DM:** ${dmSent ? 'Yes' : 'No (DMs closed)'}`
-        )
-        .addFields({ name: 'Message content', value: attemptedContent.slice(0, 1000) })
-        .setTimestamp();
+      const incidentEmbed = baseEmbed(message.client, {
+        color: THEME.colors.danger,
+        authorName: message.author.tag,
+        authorIcon: message.author.displayAvatarURL(),
+        title: '⚠ Protected Channel — Write Attempt Blocked',
+        description:
+          `**User:** ${message.author} (\`${message.author.id}\`)\n` +
+          `**Attempted channel:** <#${sourceChannelId}>\n` +
+          '**Action taken:** Message deleted automatically\n' +
+          `**User notified via DM:** ${dmSent ? 'Yes ✅' : 'No — DMs closed ❌'}`,
+        fields: [{ name: 'Message content', value: attemptedContent.slice(0, 1000) }],
+        thumbnail: message.author.displayAvatarURL(),
+      });
 
       await logChannel.send({ embeds: [incidentEmbed] });
     } catch (err) {
