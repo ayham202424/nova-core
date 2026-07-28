@@ -2,6 +2,7 @@ const { Events } = require('discord.js');
 const verifyHandler = require('../handlers/verifyHandler');
 const dmHandler = require('../handlers/dmHandler');
 const dmMenuHandler = require('../handlers/dmMenuHandler');
+const warnSelectHandler = require('../handlers/warnSelectHandler');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -34,6 +35,13 @@ module.exports = {
       }
       if (interaction.customId.startsWith('dm_menu_')) {
         return dmMenuHandler.handleButton(interaction);
+      }
+      return;
+    }
+
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith('unwarn_select_')) {
+        return warnSelectHandler.handleUnwarnSelect(interaction);
       }
       return;
     }

@@ -1,66 +1,52 @@
-const { SlashCommandBuilder } = require('discord.js');
-const config = require('../config');
+const { SlashCommandBuilder, StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
 const { hasRank, RANKS } = require('../utils/permissions');
-const { removeWarn } = require('../database/db');
+const { getWarns } = require('../database/db');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unwarn')
-    .setDescription("Remove a specific warning from a member's history.")
-    .addIntegerOption((opt) => opt.setName('warnid').setDescription('The warning ID (see /warns)').setRequired(true))
-    .addStringOption((opt) => opt.setName('reason').setDescription('Why are you removing this warning?').setRequired(true)),
+    .setDescription("Remove one of a member's warnings by picking it from a list.")
+    .addUserOption((opt) => opt.setName('user').setDescription('The member to remove a warning from').setRequired(true)),
 
   async execute(interaction) {
     if (!hasRank(interaction.member, RANKS.STAFF)) {
       return interaction.reply({ content: 'You need at least Staff rank to use this command.', ephemeral: true });
     }
 
-    const warnId = interaction.options.getInteger('warnid');
-    const reason = interaction.options.getString('reason');
+    const targetUser = interaction.options.getUser('user');
+    const warns = getWarns(targetUser.id);
 
-    const removed = removeWarn(warnId);
-    if (!removed) {
-      return interaction.reply({ content: `No warning found with ID \`${warnId}\`.`, ephemeral: true });
-    }
-
-    let dmSent = true;
-    try {
-      const targetUser = await interaction.client.users.fetch(removed.user_id);
-      const dmEmbed = baseEmbed(interaction.client, {
+    if (warns.length === 0) {
+      const embed = baseEmbed(interaction.client, {
         color: THEME.colors.success,
-        title: '✅ A Warning Was Removed',
-        description:
-          `One of your warnings in **Nova-Creations** has been removed.\n\n` +
-          `**Original reason:** ${removed.reason}\n` +
-          `**Removed by:** ${interaction.user.tag}\n` +
-          `**Removal reason:** ${reason}`,
+        title: 'Clean Record',
+        description: `${targetUser} has no warnings to remove.`,
       });
-      await targetUser.send({ embeds: [dmEmbed] });
-    } catch (err) {
-      dmSent = false;
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    try {
-      const logChannel = await interaction.client.channels.fetch(config.channels.cmdsLogs);
-      const logEmbed = baseEmbed(interaction.client, {
-        color: THEME.colors.success,
-        title: '✅ Warning Removed',
-        description:
-          `**Warn ID:** \`${warnId}\`\n` +
-          `**Affected user:** <@${removed.user_id}> (\`${removed.user_id}\`)\n` +
-          `**Removed by:** ${interaction.user} (\`${interaction.user.id}\`)\n` +
-          `**User notified:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
-        fields: [
-          { name: 'Original reason', value: removed.reason },
-          { name: 'Removal reason', value: reason },
-        ],
-      });
-      await logChannel.send({ embeds: [logEmbed] });
-    } catch (err) {
-      console.error('Failed to log unwarn:', err);
-    }
+    const options = warns.slice(0, 25).map((w) => ({
+      label: `${w.warn_type} — ${new Date(w.timestamp).toLocaleDateString()}`,
+      description: w.reason.slice(0, 90),
+      value: String(w.id),
+    }));
 
-    await interaction.reply({ content: `Warning \`${warnId}\` has been removed.`, ephemeral: true });
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId(`unwarn_select_${targetUser.id}`)
+      .setPlaceholder('Select a warning to remove')
+      .addOptions(options);
+
+    const row = new ActionRowBuilder().addComponents(menu);
+
+    const embed = baseEmbed(interaction.client, {
+      color: THEME.colors.warning,
+      authorName: targetUser.tag,
+      authorIcon: targetUser.displayAvatarURL(),
+      title: `Select a Warning to Remove (${warns.length} total)`,
+      description: 'Pick one from the dropdown below.',
+    });
+
+    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
   },
 };
