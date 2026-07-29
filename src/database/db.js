@@ -27,7 +27,7 @@ for (const sql of migrations) {
   try {
     db.exec(sql);
   } catch (err) {
-    // column already exists on this database file — safe to ignore
+    // column already exists — safe to ignore
   }
 }
 
@@ -44,13 +44,28 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id TEXT,
+    buyer_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    roblox_username TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    status TEXT DEFAULT 'open',
+    claimed_by TEXT,
+    created_at TEXT NOT NULL,
+    claimed_at TEXT,
+    closed_at TEXT,
+    closed_by TEXT,
+    close_reason TEXT
+  );
+`);
+
 function getOrCreateUser(userId) {
   let user = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
   if (!user) {
-    db.prepare('INSERT INTO users (user_id, join_date) VALUES (?, ?)').run(
-      userId,
-      new Date().toISOString()
-    );
+    db.prepare('INSERT INTO users (user_id, join_date) VALUES (?, ?)').run(userId, new Date().toISOString());
     user = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
   }
   return user;
@@ -108,6 +123,47 @@ function clearWarns(userId) {
   return count;
 }
 
+function createTicket({ buyerId, itemType, robloxUsername, paymentMethod }) {
+  const info = db.prepare(
+    `INSERT INTO tickets (buyer_id, item_type, roblox_username, payment_method, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(buyerId, itemType, robloxUsername, paymentMethod, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setTicketChannel(ticketId, channelId) {
+  db.prepare('UPDATE tickets SET channel_id = ? WHERE id = ?').run(channelId, ticketId);
+}
+
+function getOpenTicketByBuyer(buyerId) {
+  return db.prepare("SELECT * FROM tickets WHERE buyer_id = ? AND status IN ('open', 'claimed')").get(buyerId);
+}
+
+function getTicketByChannel(channelId) {
+  return db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(channelId);
+}
+
+function claimTicket(channelId, staffId) {
+  db.prepare("UPDATE tickets SET status = 'claimed', claimed_by = ?, claimed_at = ? WHERE channel_id = ?").run(
+    staffId,
+    new Date().toISOString(),
+    channelId
+  );
+}
+
+function closeTicket(channelId, staffId, reason) {
+  db.prepare("UPDATE tickets SET status = 'closed', closed_by = ?, closed_at = ?, close_reason = ? WHERE channel_id = ?").run(
+    staffId,
+    new Date().toISOString(),
+    reason,
+    channelId
+  );
+}
+
+function cancelTicket(channelId) {
+  db.prepare("UPDATE tickets SET status = 'cancelled' WHERE channel_id = ?").run(channelId);
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -119,4 +175,11 @@ module.exports = {
   getWarnById,
   removeWarn,
   clearWarns,
+  createTicket,
+  setTicketChannel,
+  getOpenTicketByBuyer,
+  getTicketByChannel,
+  claimTicket,
+  closeTicket,
+  cancelTicket,
 };

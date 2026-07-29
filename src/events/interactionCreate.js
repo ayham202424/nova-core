@@ -4,6 +4,7 @@ const dmHandler = require('../handlers/dmHandler');
 const dmMenuHandler = require('../handlers/dmMenuHandler');
 const warnSelectHandler = require('../handlers/warnSelectHandler');
 const contextModalHandler = require('../handlers/contextModalHandler');
+const ticketFlow = require('../handlers/ticketFlow');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
@@ -13,7 +14,6 @@ module.exports = {
     if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (!command) return;
-
       try {
         await command.execute(interaction);
       } catch (err) {
@@ -37,11 +37,17 @@ module.exports = {
       if (interaction.customId === 'verify_accept') return verifyHandler.handleAccept(interaction);
       if (interaction.customId.startsWith('staff_dm_open_')) return dmHandler.openModal(interaction);
       if (interaction.customId.startsWith('dm_menu_')) return dmMenuHandler.handleButton(interaction);
+      if (interaction.customId.startsWith('market_interested_')) return ticketFlow.handleInterestedClick(interaction);
+      if (interaction.customId.startsWith('market_claim_')) return ticketFlow.handleClaim(interaction);
+      if (interaction.customId.startsWith('market_cancel_')) return ticketFlow.handleCancel(interaction);
+      if (interaction.customId.startsWith('market_restore_')) return ticketFlow.handleRestore(interaction);
+      if (interaction.customId.startsWith('market_close_')) return ticketFlow.handleClose(interaction);
       return;
     }
 
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId.startsWith('unwarn_select_')) return warnSelectHandler.handleUnwarnSelect(interaction);
+      if (interaction.customId === 'market_payment_select') return ticketFlow.handlePaymentSelect(interaction);
       return;
     }
 
@@ -55,6 +61,7 @@ module.exports = {
       ) {
         return contextModalHandler.handleContextModal(interaction);
       }
+      if (interaction.customId.startsWith('market_username_modal_')) return ticketFlow.handleUsernameModalSubmit(interaction);
     }
   },
 };

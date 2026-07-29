@@ -16,6 +16,12 @@ module.exports = {
     cmdsGuide: process.env.CMDS_GUIDE_CHANNEL_ID,
     help: process.env.HELP_CHANNEL_ID,
     trapChannel: process.env.TRAP_CHANNEL_ID,
+    ui: process.env.UI_CHANNEL_ID,
+    builds: process.env.BUILDS_CHANNEL_ID,
+    scripts: process.env.SCRIPTS_CHANNEL_ID,
+    animations: process.env.ANIMATIONS_CHANNEL_ID,
+    ticketsCategory: process.env.TICKETS_CATEGORY_ID,
+    ticketLogs: process.env.TICKET_LOGS_CHANNEL_ID,
   },
 
   roles: {
