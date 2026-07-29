@@ -13,9 +13,23 @@ db.exec(`
     join_date TEXT,
     warns_count INTEGER DEFAULT 0,
     tickets_opened INTEGER DEFAULT 0,
-    verified INTEGER DEFAULT 0
+    verified INTEGER DEFAULT 0,
+    warn_streak INTEGER DEFAULT 0,
+    last_warn_at TEXT
   );
 `);
+
+const migrations = [
+  "ALTER TABLE users ADD COLUMN warn_streak INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN last_warn_at TEXT",
+];
+for (const sql of migrations) {
+  try {
+    db.exec(sql);
+  } catch (err) {
+    // column already exists on this database file — safe to ignore
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS warns (
@@ -47,18 +61,28 @@ function setVerified(userId, value = 1) {
   db.prepare('UPDATE users SET verified = ? WHERE user_id = ?').run(value, userId);
 }
 
-function addWarn({ userId, moderatorId, reason, proofUrl, warnType, timeoutMinutes }) {
+function getWarnStreak(userId) {
+  const user = getOrCreateUser(userId);
+  const now = Date.now();
+  const resetWindowMs = 24 * 60 * 60 * 1000;
+  const last = user.last_warn_at ? new Date(user.last_warn_at).getTime() : null;
+  if (!last || now - last > resetWindowMs) return 1;
+  return user.warn_streak + 1;
+}
+
+function addWarn({ userId, moderatorId, reason, proofUrl, warnType, timeoutMinutes, streak }) {
   getOrCreateUser(userId);
   db.prepare(
     `INSERT INTO warns (user_id, moderator_id, reason, proof_url, warn_type, timeout_minutes, timestamp)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(userId, moderatorId, reason, proofUrl || null, warnType, timeoutMinutes, new Date().toISOString());
-  db.prepare('UPDATE users SET warns_count = warns_count + 1 WHERE user_id = ?').run(userId);
+  db.prepare(
+    'UPDATE users SET warns_count = warns_count + 1, warn_streak = ?, last_warn_at = ? WHERE user_id = ?'
+  ).run(streak, new Date().toISOString(), userId);
 }
 
 function getWarnCount(userId) {
-  const user = getOrCreateUser(userId);
-  return user.warns_count;
+  return getOrCreateUser(userId).warns_count;
 }
 
 function getWarns(userId) {
@@ -80,7 +104,7 @@ function removeWarn(warnId) {
 function clearWarns(userId) {
   const count = db.prepare('SELECT COUNT(*) as c FROM warns WHERE user_id = ?').get(userId).c;
   db.prepare('DELETE FROM warns WHERE user_id = ?').run(userId);
-  db.prepare('UPDATE users SET warns_count = 0 WHERE user_id = ?').run(userId);
+  db.prepare('UPDATE users SET warns_count = 0, warn_streak = 0, last_warn_at = NULL WHERE user_id = ?').run(userId);
   return count;
 }
 
@@ -88,6 +112,7 @@ module.exports = {
   db,
   getOrCreateUser,
   setVerified,
+  getWarnStreak,
   addWarn,
   getWarnCount,
   getWarns,

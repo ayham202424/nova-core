@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const config = require('../config');
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
 const { baseEmbed, THEME } = require('../utils/embeds');
+const { checkForAbuse } = require('../utils/abuseDetection');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,7 +39,7 @@ module.exports = {
           `**Reason:** ${reason}\n` +
           `**Issued by:** ${staffMember.user.tag}\n` +
           (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
-          `\n\nIf you believe this was a mistake, you can submit a ban appeal (coming soon).`,
+          `\n\nIf you believe this was a mistake, a ban appeal system is coming soon.`,
       });
       await targetUser.send({ embeds: [dmEmbed] });
     } catch (err) {
@@ -72,7 +73,9 @@ module.exports = {
       console.error('Failed to log ban:', err);
     }
 
-    if (!banned) {
+    if (banned) {
+      await checkForAbuse(interaction.client, interaction.guild, staffMember, 'ban');
+    } else {
       return interaction.editReply({ content: 'Failed to ban — check my role position and permissions.' });
     }
 

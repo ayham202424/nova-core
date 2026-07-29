@@ -15,6 +15,7 @@ module.exports = {
     staffGuide: process.env.STAFF_GUIDE_CHANNEL_ID,
     cmdsGuide: process.env.CMDS_GUIDE_CHANNEL_ID,
     help: process.env.HELP_CHANNEL_ID,
+    trapChannel: process.env.TRAP_CHANNEL_ID,
   },
 
   roles: {

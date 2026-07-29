@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const config = require('../config');
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
 const { baseEmbed, THEME } = require('../utils/embeds');
+const { checkForAbuse } = require('../utils/abuseDetection');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -76,7 +77,9 @@ module.exports = {
       console.error('Failed to log kick:', err);
     }
 
-    if (!kicked) {
+    if (kicked) {
+      await checkForAbuse(interaction.client, interaction.guild, staffMember, 'kick');
+    } else {
       return interaction.editReply({ content: 'Failed to kick — check that my role is above theirs.' });
     }
 

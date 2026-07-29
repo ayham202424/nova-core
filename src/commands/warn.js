@@ -1,8 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const config = require('../config');
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
-const { getWarnLevel } = require('../utils/warnLevels');
-const { addWarn, getWarnCount } = require('../database/db');
+const { issueWarn } = require('../utils/autoWarn');
 const { baseEmbed } = require('../utils/embeds');
 const { formatDuration } = require('../utils/duration');
 
@@ -35,70 +33,21 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const newWarnCount = getWarnCount(targetUser.id) + 1;
-    const level = getWarnLevel(newWarnCount);
-
-    addWarn({
-      userId: targetUser.id,
+    const { level, streak, timeoutApplied } = await issueWarn({
+      client: interaction.client,
+      guild: interaction.guild,
+      targetUser,
+      moderatorLabel: staffMember.user.tag,
       moderatorId: staffMember.id,
       reason,
       proofUrl: proof ? proof.url : null,
-      warnType: level.name,
-      timeoutMinutes: level.timeoutMinutes,
     });
-
-    let timeoutApplied = true;
-    try {
-      await targetMember.timeout(level.timeoutMinutes * 60 * 1000, `${level.name} — ${reason}`);
-    } catch (err) {
-      timeoutApplied = false;
-      console.error('Failed to apply timeout:', err);
-    }
-
-    let dmSent = true;
-    try {
-      const dmEmbed = baseEmbed(interaction.client, {
-        color: level.color,
-        title: `${level.emoji} ${level.name}`,
-        description:
-          `You have received a warning in **Nova-Creations**.\n\n` +
-          `**Reason:** ${reason}\n` +
-          `**Issued by:** ${staffMember.user.tag}\n` +
-          `**Timeout duration:** ${formatDuration(level.timeoutMinutes)}\n` +
-          `**Total warnings:** ${newWarnCount}\n` +
-          (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided'),
-      });
-      await targetUser.send({ embeds: [dmEmbed] });
-    } catch (err) {
-      dmSent = false;
-    }
-
-    try {
-      const logChannel = await interaction.client.channels.fetch(config.channels.cmdsLogs);
-      const logEmbed = baseEmbed(interaction.client, {
-        color: level.color,
-        authorName: targetUser.tag,
-        authorIcon: targetUser.displayAvatarURL(),
-        title: `${level.emoji} Warn Issued — ${level.name}`,
-        description:
-          `**User:** ${targetUser} (\`${targetUser.id}\`)\n` +
-          `**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)\n` +
-          `**Timeout:** ${formatDuration(level.timeoutMinutes)} (${timeoutApplied ? 'applied ✅' : 'failed ❌'})\n` +
-          `**Total warnings:** ${newWarnCount}\n` +
-          `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
-        fields: [{ name: 'Reason', value: reason }],
-        image: proof ? proof.url : null,
-      });
-      await logChannel.send({ embeds: [logEmbed] });
-    } catch (err) {
-      console.error('Failed to log warn:', err);
-    }
 
     const confirmEmbed = baseEmbed(interaction.client, {
       color: level.color,
       title: `${level.emoji} Warn Applied`,
       description:
-        `${targetUser} has been warned (**${level.name}**, warning #${newWarnCount}).\n` +
+        `${targetUser} has been warned (**${level.name}**, streak #${streak}).\n` +
         `Timeout: ${formatDuration(level.timeoutMinutes)}` +
         (timeoutApplied ? '' : ' — ⚠️ failed to apply (check role hierarchy)'),
     });

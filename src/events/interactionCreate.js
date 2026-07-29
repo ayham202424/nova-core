@@ -3,6 +3,7 @@ const verifyHandler = require('../handlers/verifyHandler');
 const dmHandler = require('../handlers/dmHandler');
 const dmMenuHandler = require('../handlers/dmMenuHandler');
 const warnSelectHandler = require('../handlers/warnSelectHandler');
+const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -16,7 +17,14 @@ module.exports = {
         await command.execute(interaction);
       } catch (err) {
         console.error(err);
-        const reply = { content: 'Something went wrong while executing this command.', ephemeral: true };
+        const errorEmbed = baseEmbed(interaction.client, {
+          color: THEME.colors.danger,
+          title: '⚠️ Something Went Wrong',
+          description:
+            'This command hit an unexpected error. It has been logged in the console — please try again, ' +
+            'and contact the owner if it keeps happening.',
+        });
+        const reply = { embeds: [errorEmbed], ephemeral: true };
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(reply);
         } else {

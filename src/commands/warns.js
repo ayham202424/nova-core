@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { hasRank, RANKS } = require('../utils/permissions');
 const { getWarns } = require('../database/db');
+const { isSmallWarn } = require('../utils/warnLevels');
 const { baseEmbed, THEME } = require('../utils/embeds');
 const { formatDuration } = require('../utils/duration');
 
@@ -27,6 +28,9 @@ module.exports = {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
+    const smallCount = warns.filter((w) => isSmallWarn(w.warn_type)).length;
+    const bigCount = warns.length - smallCount;
+
     const fields = warns.slice(0, 10).map((w) => ({
       name: `Warn ID: ${w.id} — ${w.warn_type}`,
       value:
@@ -41,8 +45,11 @@ module.exports = {
       color: THEME.colors.warning,
       authorName: targetUser.tag,
       authorIcon: targetUser.displayAvatarURL(),
-      title: `Warning History (${warns.length} total)`,
-      description: 'Use `/unwarn warnid:<id>` to remove a specific warning.',
+      title: `Warning History — ${warns.length} total`,
+      description:
+        `**Minor warnings:** ${smallCount}  ·  **Major warnings:** ${bigCount}\n` +
+        'Use `/unwarn user:<name>` to remove a specific warning from the dropdown.\n' +
+        (warns.length > 10 ? `_Showing the 10 most recent of ${warns.length}._` : ''),
       fields,
     });
 
