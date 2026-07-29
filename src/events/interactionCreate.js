@@ -3,13 +3,14 @@ const verifyHandler = require('../handlers/verifyHandler');
 const dmHandler = require('../handlers/dmHandler');
 const dmMenuHandler = require('../handlers/dmMenuHandler');
 const warnSelectHandler = require('../handlers/warnSelectHandler');
+const contextModalHandler = require('../handlers/contextModalHandler');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
   name: Events.InteractionCreate,
   once: false,
   async execute(interaction) {
-    if (interaction.isChatInputCommand()) {
+    if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (!command) return;
 
@@ -20,9 +21,7 @@ module.exports = {
         const errorEmbed = baseEmbed(interaction.client, {
           color: THEME.colors.danger,
           title: '⚠️ Something Went Wrong',
-          description:
-            'This command hit an unexpected error. It has been logged in the console — please try again, ' +
-            'and contact the owner if it keeps happening.',
+          description: 'This command hit an unexpected error. Please try again, and contact the owner if it keeps happening.',
         });
         const reply = { embeds: [errorEmbed], ephemeral: true };
         if (interaction.replied || interaction.deferred) {
@@ -35,31 +34,26 @@ module.exports = {
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId === 'verify_accept') {
-        return verifyHandler.handleAccept(interaction);
-      }
-      if (interaction.customId.startsWith('staff_dm_open_')) {
-        return dmHandler.openModal(interaction);
-      }
-      if (interaction.customId.startsWith('dm_menu_')) {
-        return dmMenuHandler.handleButton(interaction);
-      }
+      if (interaction.customId === 'verify_accept') return verifyHandler.handleAccept(interaction);
+      if (interaction.customId.startsWith('staff_dm_open_')) return dmHandler.openModal(interaction);
+      if (interaction.customId.startsWith('dm_menu_')) return dmMenuHandler.handleButton(interaction);
       return;
     }
 
     if (interaction.isStringSelectMenu()) {
-      if (interaction.customId.startsWith('unwarn_select_')) {
-        return warnSelectHandler.handleUnwarnSelect(interaction);
-      }
+      if (interaction.customId.startsWith('unwarn_select_')) return warnSelectHandler.handleUnwarnSelect(interaction);
       return;
     }
 
     if (interaction.isModalSubmit()) {
-      if (interaction.customId.startsWith('staff_dm_modal_')) {
-        return dmHandler.submitModal(interaction);
-      }
-      if (interaction.customId === 'dm_contact_owner_modal') {
-        return dmMenuHandler.handleContactModal(interaction);
+      if (interaction.customId.startsWith('staff_dm_modal_')) return dmHandler.submitModal(interaction);
+      if (interaction.customId === 'dm_contact_owner_modal') return dmMenuHandler.handleContactModal(interaction);
+      if (
+        interaction.customId.startsWith('ctxwarn_') ||
+        interaction.customId.startsWith('ctxkick_') ||
+        interaction.customId.startsWith('ctxban_')
+      ) {
+        return contextModalHandler.handleContextModal(interaction);
       }
     }
   },

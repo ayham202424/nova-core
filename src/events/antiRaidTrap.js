@@ -41,12 +41,11 @@ module.exports = {
       console.error('Failed to clean trap-triggered messages:', err);
     }
 
-    let kicked = true;
+    let banned = true;
     try {
-      const member = await guild.members.fetch(author.id);
-      await member.kick('Triggered anti-raid trap channel');
+      await guild.bans.create(author.id, { reason: 'Triggered anti-raid trap channel' });
     } catch (err) {
-      kicked = false;
+      banned = false;
     }
 
     try {
@@ -64,7 +63,7 @@ module.exports = {
             title: '🚨 Anti-Raid Trap Triggered',
             description:
               `**User:** ${author} (\`${author.id}\`)\n` +
-              `**Action:** ${kicked ? 'Kicked ✅' : 'Kick failed ❌'}\n` +
+              `**Action:** ${banned ? 'Banned ✅' : 'Ban failed ❌'}\n` +
               `**Messages cleaned server-wide:** ${deletedCount}\n\n` +
               'This user posted in a hidden trap channel — no legitimate member is ever told about it, so this is a strong signal of a raid/self-bot.',
           }),
