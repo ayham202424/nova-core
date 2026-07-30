@@ -12,7 +12,8 @@
     "post-cmds-guide": "node scripts/post-cmds-guide.js",
     "post-help-guide": "node scripts/post-help-guide.js",
     "setup-trap-channel": "node scripts/setup-trap-channel.js",
-    "post-trap-warning": "node scripts/post-trap-warning.js"
+    "post-trap-warning": "node scripts/post-trap-warning.js",
+    "post-ping-settings": "node scripts/post-ping-settings.js"
   },
   "engines": {
     "node": ">=18.0.0"

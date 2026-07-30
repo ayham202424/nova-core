@@ -62,6 +62,24 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id TEXT,
+    message_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    assigned_role_id TEXT,
+    deadline TEXT,
+    status TEXT DEFAULT 'open',
+    claimed_by TEXT,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    cancelled_at TEXT
+  );
+`);
+
 function getOrCreateUser(userId) {
   let user = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
   if (!user) {
@@ -164,6 +182,34 @@ function cancelTicket(channelId) {
   db.prepare("UPDATE tickets SET status = 'cancelled' WHERE channel_id = ?").run(channelId);
 }
 
+function createTask({ title, description, assignedRoleId, deadline, createdBy }) {
+  const info = db.prepare(
+    `INSERT INTO tasks (title, description, assigned_role_id, deadline, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(title, description, assignedRoleId || null, deadline || null, createdBy, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setTaskMessage(taskId, channelId, messageId) {
+  db.prepare('UPDATE tasks SET channel_id = ?, message_id = ? WHERE id = ?').run(channelId, messageId, taskId);
+}
+
+function getTask(taskId) {
+  return db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+}
+
+function claimTask(taskId, staffId) {
+  db.prepare("UPDATE tasks SET status = 'claimed', claimed_by = ? WHERE id = ?").run(staffId, taskId);
+}
+
+function completeTask(taskId) {
+  db.prepare("UPDATE tasks SET status = 'done', completed_at = ? WHERE id = ?").run(new Date().toISOString(), taskId);
+}
+
+function cancelTask(taskId) {
+  db.prepare("UPDATE tasks SET status = 'cancelled', cancelled_at = ? WHERE id = ?").run(new Date().toISOString(), taskId);
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -182,4 +228,10 @@ module.exports = {
   claimTicket,
   closeTicket,
   cancelTicket,
+  createTask,
+  setTaskMessage,
+  getTask,
+  claimTask,
+  completeTask,
+  cancelTask,
 };

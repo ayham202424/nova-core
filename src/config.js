@@ -22,6 +22,7 @@ module.exports = {
     animations: process.env.ANIMATIONS_CHANNEL_ID,
     ticketsCategory: process.env.TICKETS_CATEGORY_ID,
     ticketLogs: process.env.TICKET_LOGS_CHANNEL_ID,
+    pingSettings: process.env.PING_SETTINGS_CHANNEL_ID,
   },
 
   roles: {
@@ -32,6 +33,13 @@ module.exports = {
     mod: process.env.MOD_ROLE_ID,
     headMod: process.env.HEAD_MOD_ROLE_ID,
     manager: process.env.MANAGER_ROLE_ID,
+  },
+
+  pingRoles: {
+    announcement: process.env.ANNOUNCEMENT_PING_ROLE_ID,
+    giveaway: process.env.GIVEAWAY_PING_ROLE_ID,
+    partner: process.env.PARTNER_PING_ROLE_ID,
+    event: process.env.EVENT_PING_ROLE_ID,
   },
 
   verifyBannerUrl: process.env.VERIFY_BANNER_URL || null,
