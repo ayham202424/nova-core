@@ -14,8 +14,8 @@ module.exports = {
 
   async execute(interaction) {
     const staffMember = interaction.member;
-    if (!hasRank(staffMember, RANKS.STAFF)) {
-      return interaction.reply({ content: 'You need at least Staff rank to use this command.', ephemeral: true });
+    if (!hasRank(staffMember, RANKS.MOD)) {
+      return interaction.reply({ content: 'You need at least Mod rank to use this command.', ephemeral: true });
     }
 
     const targetUser = interaction.options.getUser('user');
@@ -39,9 +39,7 @@ module.exports = {
         color: THEME.colors.danger,
         title: '👢 You Have Been Kicked',
         description:
-          `You have been kicked from **Nova-Creations**.\n\n` +
-          `**Reason:** ${reason}\n` +
-          `**Issued by:** ${staffMember.user.tag}\n` +
+          `You have been kicked from **Nova-Creations**.\n\n**Reason:** ${reason}\n**Issued by:** ${staffMember.user.tag}\n` +
           (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
           `\n\nYou are welcome to rejoin and follow the rules going forward.`,
       });
@@ -65,10 +63,7 @@ module.exports = {
         authorName: targetUser.tag,
         authorIcon: targetUser.displayAvatarURL(),
         title: kicked ? '👢 Member Kicked' : '⚠️ Kick Failed',
-        description:
-          `**User:** ${targetUser} (\`${targetUser.id}\`)\n` +
-          `**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)\n` +
-          `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
+        description: `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
         fields: [{ name: 'Reason', value: reason }],
         image: proof ? proof.url : null,
       });

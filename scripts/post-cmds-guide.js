@@ -23,34 +23,30 @@ client.once(Events.ClientReady, async () => {
     const channel = await client.channels.fetch(config.channels.cmdsGuide);
     await clearOldMessages(channel);
 
-    const intro = baseEmbed(client, {
-      color: THEME.colors.primary,
-      title: '⚙️ Commands Guide',
-      description: 'Every command, what it does, and the minimum rank required to use it.',
-    });
+    const intro = baseEmbed(client, { color: THEME.colors.primary, title: '⚙️ Commands Guide', description: 'Every command and the minimum rank required.' });
 
     const modCommands = baseEmbed(client, {
       color: THEME.colors.primary,
       title: 'Moderation Commands',
       fields: [
-        { name: '/warn `user` `reason` `proof`', value: 'Warns a user. Timeout severity escalates automatically. **Requires:** Trial Staff+' },
-        { name: '/warns `user`', value: "View a member's full warning history. **Requires:** Trial Staff+" },
-        { name: '/unwarn `user`', value: 'Remove one warning from a member via dropdown selection. **Requires:** Staff+' },
-        { name: '/kick `user` `reason` `proof`', value: 'Kicks a member from the server. **Requires:** Staff+' },
-        { name: '/ban `user` `reason` `proof`', value: 'Bans a member from the server. **Requires:** Mod+' },
-        { name: '/unban `userid` `reason`', value: 'Unbans a user by their User ID. **Requires:** Mod+' },
-        { name: '/clearwarns `user` `reason`', value: "Wipes a member's entire warning history. **Requires:** Head Mod+" },
+        { name: '/warn `user` `reason` `proof`', value: 'Escalating warn. **Requires:** Trial Staff+' },
+        { name: '/warns `user`', value: "View warning history. **Requires:** Trial Staff+" },
+        { name: '/unwarn `user`', value: 'Remove one warning. **Requires:** Staff+' },
+        { name: '/kick `user` `reason` `proof`', value: 'Kick a member. **Requires:** Mod+' },
+        { name: '/ban `user` `reason` `proof`', value: 'Ban a member. **Requires:** Head Mod+' },
+        { name: '/unban `userid` `reason`', value: 'Unban by User ID. **Requires:** Head Mod+' },
+        { name: '/clearwarns `user` `reason`', value: 'Wipe entire warning history. **Requires:** Community Manager+' },
       ],
     });
 
     const rightClickTools = baseEmbed(client, {
       color: THEME.colors.primary,
       title: 'Right-Click Proof Tools',
-      description: 'Right-click any message → **Apps** → choose a tool. The clicked message is automatically attached as proof.',
+      description: 'Right-click any message → **Apps** → choose a tool. The message is auto-attached as proof.',
       fields: [
         { name: 'Warn (use as proof)', value: '**Requires:** Trial Staff+' },
-        { name: 'Kick (use as proof)', value: '**Requires:** Staff+' },
-        { name: 'Ban (use as proof)', value: '**Requires:** Mod+' },
+        { name: 'Kick (use as proof)', value: '**Requires:** Mod+' },
+        { name: 'Ban (use as proof)', value: '**Requires:** Head Mod+' },
       ],
     });
 
@@ -58,8 +54,8 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Ticket Management',
       fields: [
-        { name: '/reopenticket `ticketid`', value: 'Reopens a closed support ticket with its full past chat history attached as a file. A "Reopen" button is also available directly on every entry in support-ticket-logs. **Requires:** Staff+' },
-        { name: '/restoreticket `ticketid`', value: 'Quickly view a ticket\'s full transcript as a file, without reopening a channel. **Requires:** Staff+' },
+        { name: '/reopenticket `ticketid`', value: 'Reopens a closed support ticket with full history attached. Button also on every support-ticket-logs entry. **Requires:** Staff+' },
+        { name: '/restoreticket `ticketid`', value: "Quick read-only transcript view. **Requires:** Staff+" },
       ],
     });
 
@@ -67,8 +63,8 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Staff & Management Tools',
       fields: [
-        { name: '/announcement `title` `message` `color` `banner` `file`', value: 'Creates a formatted announcement with channel & ping selection. **Requires:** Manager+' },
-        { name: '/task `title` `description` `assign_role` `deadline_minutes`', value: 'Posts a claimable task for staff/developers. **Requires:** Manager+' },
+        { name: '/announcement `title` `message` `color` `banner` `file`', value: 'Formatted announcement with channel & ping selection. **Requires:** Manager+' },
+        { name: '/task `title` `description` `assign_role` `deadline_minutes`', value: 'Claimable task for staff/devs. **Requires:** Manager+' },
       ],
     });
 
@@ -76,11 +72,11 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.warning,
       title: 'Automated Security Systems',
       description:
-        '✦ **Spam protection:** 4+ messages in 5 seconds → first offense in 24h gets a 30-second cooldown with a warning DM (no formal warn). ' +
-        'If it happens again within 24 hours, real escalating warns kick in.\n' +
-        '✦ **Language filter:** prohibited words are automatically removed and result in a warn, same escalation as manual warns.\n' +
-        '✦ **Suspicious activity flags:** users automatically get flagged here with full context once they reach 3, 5, 8, or 12 total warnings.\n' +
-        '✦ Every moderation action logs automatically — no manual logging needed. Run `/help` anywhere for a quick summary.',
+        '✦ **Spam protection:** 4+ messages in 5s → first offense in 24h gets a 30-second cooldown with a DM warning (no formal warn). Repeat within 24h → real escalating warns.\n' +
+        '✦ **Language filter:** prohibited words are auto-removed and issue a warn on the same escalation ladder.\n' +
+        '✦ **Suspicious activity flags:** users are automatically flagged here with full context at 3, 5, 8, and 12 total warnings.\n' +
+        '✦ **Staff abuse detection:** 3+ kicks/bans by one staff member within an hour auto-locks them and pings leadership.\n' +
+        '✦ Run `/help` anywhere for a quick summary.',
     });
 
     await channel.send({ embeds: [intro] });

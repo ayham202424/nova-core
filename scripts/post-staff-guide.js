@@ -10,9 +10,7 @@ async function clearOldMessages(channel) {
     const ownMessages = messages.filter((m) => m.author.id === channel.client.user.id);
     if (ownMessages.size > 0) {
       await channel.bulkDelete(ownMessages, true).catch(async () => {
-        for (const [, msg] of ownMessages) {
-          await msg.delete().catch(() => {});
-        }
+        for (const [, msg] of ownMessages) await msg.delete().catch(() => {});
       });
     }
   } catch (err) {
@@ -28,20 +26,32 @@ client.once(Events.ClientReady, async () => {
     const intro = baseEmbed(client, {
       color: THEME.colors.primary,
       title: '📖 Staff Guide — Ranks & Responsibilities',
-      description: 'This channel explains every staff rank, what it can do, and how promotion works.',
+      description: 'This channel explains every staff rank and what it can do. Ranks are listed lowest to highest — each includes everything below it.',
     });
 
-    const ranks = baseEmbed(client, {
+    const ranksPart1 = baseEmbed(client, {
       color: THEME.colors.primary,
-      title: 'Rank Hierarchy',
-      description: 'Ranks are listed from lowest to highest. Higher ranks include all permissions of lower ranks.',
+      title: 'Ranks ① – ⑥',
       fields: [
-        { name: '① Trial Staff', value: 'Can issue `/warn` and view `/warns`, plus the right-click Warn tool. Learning the ropes — closely observed by higher staff.' },
-        { name: '② Staff', value: 'Everything above, plus `/kick`, `/unwarn`, and the right-click Kick tool. Can claim purchase tickets.' },
-        { name: '③ Mod', value: 'Everything above, plus `/ban`, `/unban`, and the right-click Ban tool.' },
-        { name: '④ Head Mod', value: 'Everything above, plus `/clearwarns` and oversight of Staff/Trial Staff.' },
-        { name: '⑤ Manager', value: 'Full moderation authority, plus `/announcement` and `/task` — the only rank besides Owner allowed to post official announcements or create tasks. Involved in staff decisions and server direction.' },
-        { name: '⑥ Owner', value: 'Full control over the server and all systems.' },
+        { name: '① Trial Staff', value: '`/warn`, `/warns`, right-click Warn. Learning the ropes, closely observed.' },
+        { name: '② Staff', value: '+ `/unwarn`, `/restoreticket`, `/reopenticket`. Can claim purchase & support tickets.' },
+        { name: '③ Head Staff', value: 'Oversight of Trial Staff and Staff.' },
+        { name: '④ Junior Mod', value: 'Transitional rank between Staff and Mod.' },
+        { name: '⑤ Mod', value: '+ `/kick`, right-click Kick.' },
+        { name: '⑥ Head Mod', value: '+ `/ban`, `/unban`, right-click Ban.' },
+      ],
+    });
+
+    const ranksPart2 = baseEmbed(client, {
+      color: THEME.colors.primary,
+      title: 'Ranks ⑦ – ⑪ + Owner',
+      fields: [
+        { name: '⑦ Community Manager', value: '+ `/clearwarns`.' },
+        { name: '⑧ Project Manager', value: 'Oversees ongoing projects and development.' },
+        { name: '⑨ Manager', value: '+ `/announcement`, `/task`. Only rank besides Owner that sees and claims Staff LOA/Help tickets.' },
+        { name: '⑩ Co-Founder', value: 'Full authority alongside the Founder.' },
+        { name: '⑪ Founder', value: 'Full authority over the server.' },
+        { name: 'Owner', value: 'The Discord server owner — full control, always highest rank automatically.' },
       ],
     });
 
@@ -53,11 +63,13 @@ client.once(Events.ClientReady, async () => {
         '✦ Never moderate a staff member of equal or higher rank.\n' +
         '✦ Stay respectful, even with difficult members.\n' +
         '✦ If unsure about a situation, ask a higher rank before acting.\n' +
-        '✦ Abuse of permissions results in immediate rank removal — the server automatically flags unusual moderation activity.',
+        '✦ Abuse of permissions results in immediate rank removal — 3+ kicks/bans by one person within an hour auto-locks their account and alerts leadership.\n' +
+        `✦ Need time off or have a staff-only issue? Open a "Staff LOA / Help" ticket via <#${config.channels.supportPanel}>.`,
     });
 
     await channel.send({ embeds: [intro] });
-    await channel.send({ embeds: [ranks] });
+    await channel.send({ embeds: [ranksPart1] });
+    await channel.send({ embeds: [ranksPart2] });
     await channel.send({ embeds: [rules] });
     console.log('Staff guide updated successfully.');
   } catch (err) {

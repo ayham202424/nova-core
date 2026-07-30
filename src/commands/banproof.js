@@ -2,21 +2,16 @@ const { ContextMenuCommandBuilder, ApplicationCommandType, ModalBuilder, TextInp
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
 
 module.exports = {
-  data: new ContextMenuCommandBuilder()
-    .setName('Ban (use as proof)')
-    .setType(ApplicationCommandType.Message),
+  data: new ContextMenuCommandBuilder().setName('Ban (use as proof)').setType(ApplicationCommandType.Message),
 
   async execute(interaction) {
-    if (!hasRank(interaction.member, RANKS.MOD)) {
-      return interaction.reply({ content: 'You need at least Mod rank to do this.', ephemeral: true });
+    if (!hasRank(interaction.member, RANKS.HEAD_MOD)) {
+      return interaction.reply({ content: 'You need at least Head Mod rank to do this.', ephemeral: true });
     }
 
     const targetMessage = interaction.targetMessage;
     const targetUser = targetMessage.author;
-
-    if (targetUser.bot) {
-      return interaction.reply({ content: 'You cannot ban a bot.', ephemeral: true });
-    }
+    if (targetUser.bot) return interaction.reply({ content: 'You cannot ban a bot.', ephemeral: true });
 
     const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
     if (targetMember && getRank(targetMember) >= getRank(interaction.member) && interaction.member.id !== interaction.guild.ownerId) {
@@ -26,14 +21,7 @@ module.exports = {
     const modal = new ModalBuilder()
       .setCustomId(`ctxban_${targetUser.id}_${targetMessage.channelId}_${targetMessage.id}`)
       .setTitle(`Ban ${targetUser.username}`.slice(0, 45));
-
-    const reasonInput = new TextInputBuilder()
-      .setCustomId('ctx_reason')
-      .setLabel('Reason')
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(true)
-      .setMaxLength(500);
-
+    const reasonInput = new TextInputBuilder().setCustomId('ctx_reason').setLabel('Reason').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500);
     modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
     await interaction.showModal(modal);
   },

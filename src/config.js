@@ -33,9 +33,15 @@ module.exports = {
     member: process.env.MEMBER_ROLE_ID,
     trialStaff: process.env.TRIAL_STAFF_ROLE_ID,
     staff: process.env.STAFF_ROLE_ID,
+    headStaff: process.env.HEAD_STAFF_ROLE_ID,
+    juniorMod: process.env.JUNIOR_MOD_ROLE_ID,
     mod: process.env.MOD_ROLE_ID,
     headMod: process.env.HEAD_MOD_ROLE_ID,
+    communityManager: process.env.COMMUNITY_MANAGER_ROLE_ID,
+    projectManager: process.env.PROJECT_MANAGER_ROLE_ID,
     manager: process.env.MANAGER_ROLE_ID,
+    coFounder: process.env.CO_FOUNDER_ROLE_ID,
+    founder: process.env.FOUNDER_ROLE_ID,
   },
 
   pingRoles: {

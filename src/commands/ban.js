@@ -14,8 +14,8 @@ module.exports = {
 
   async execute(interaction) {
     const staffMember = interaction.member;
-    if (!hasRank(staffMember, RANKS.MOD)) {
-      return interaction.reply({ content: 'You need at least Mod rank to use this command.', ephemeral: true });
+    if (!hasRank(staffMember, RANKS.HEAD_MOD)) {
+      return interaction.reply({ content: 'You need at least Head Mod rank to use this command.', ephemeral: true });
     }
 
     const targetUser = interaction.options.getUser('user');
@@ -35,11 +35,9 @@ module.exports = {
         color: THEME.colors.danger,
         title: '🔨 You Have Been Banned',
         description:
-          `You have been banned from **Nova-Creations**.\n\n` +
-          `**Reason:** ${reason}\n` +
-          `**Issued by:** ${staffMember.user.tag}\n` +
+          `You have been banned from **Nova-Creations**.\n\n**Reason:** ${reason}\n**Issued by:** ${staffMember.user.tag}\n` +
           (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
-          `\n\nIf you believe this was a mistake, a ban appeal system is coming soon.`,
+          `\n\nA ban appeal system is coming soon.`,
       });
       await targetUser.send({ embeds: [dmEmbed] });
     } catch (err) {
@@ -61,10 +59,7 @@ module.exports = {
         authorName: targetUser.tag,
         authorIcon: targetUser.displayAvatarURL(),
         title: banned ? '🔨 Member Banned' : '⚠️ Ban Failed',
-        description:
-          `**User:** ${targetUser} (\`${targetUser.id}\`)\n` +
-          `**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)\n` +
-          `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
+        description: `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
         fields: [{ name: 'Reason', value: reason }],
         image: proof ? proof.url : null,
       });

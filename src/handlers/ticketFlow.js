@@ -10,7 +10,7 @@ const {
   PermissionsBitField,
 } = require('discord.js');
 const config = require('../config');
-const { hasRank, RANKS } = require('../utils/permissions');
+const { hasRank, RANKS, allStaffRoleIds } = require('../utils/permissions');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const {
   createTicket,
@@ -33,9 +33,6 @@ function cleanupPending() {
   }
 }
 
-const staffRoleIds = () =>
-  [config.roles.trialStaff, config.roles.staff, config.roles.mod, config.roles.headMod, config.roles.manager].filter(Boolean);
-
 async function handleInterestedClick(interaction) {
   cleanupPending();
   const itemChannelId = interaction.customId.replace('market_interested_', '');
@@ -49,13 +46,7 @@ async function handleInterestedClick(interaction) {
   }
 
   const modal = new ModalBuilder().setCustomId(`market_username_modal_${itemChannelId}`).setTitle('Purchase Inquiry');
-  const usernameInput = new TextInputBuilder()
-    .setCustomId('roblox_username')
-    .setLabel('Your Roblox Username')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(50);
-
+  const usernameInput = new TextInputBuilder().setCustomId('roblox_username').setLabel('Your Roblox Username').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(50);
   modal.addComponents(new ActionRowBuilder().addComponents(usernameInput));
   await interaction.showModal(modal);
 }
@@ -82,21 +73,14 @@ async function handleUsernameModalSubmit(interaction) {
 
 async function handlePaymentSelect(interaction) {
   const pending = pendingUsername.get(interaction.user.id);
-  if (!pending) {
-    return interaction.update({ content: 'This session expired — please click "I\'m Interested" again.', components: [] });
-  }
+  if (!pending) return interaction.update({ content: 'This session expired — please click "I\'m Interested" again.', components: [] });
   pendingUsername.delete(interaction.user.id);
 
   const paymentMethod = interaction.values[0];
   const info = CATEGORY_INFO[pending.itemChannelId] || { label: 'Item', emoji: '🛒' };
   const guild = interaction.guild;
 
-  const ticketId = createTicket({
-    buyerId: interaction.user.id,
-    itemType: info.label,
-    robloxUsername: pending.robloxUsername,
-    paymentMethod,
-  });
+  const ticketId = createTicket({ buyerId: interaction.user.id, itemType: info.label, robloxUsername: pending.robloxUsername, paymentMethod });
 
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -106,15 +90,8 @@ async function handlePaymentSelect(interaction) {
       deny: [PermissionsBitField.Flags.SendMessages],
     },
   ];
-  for (const roleId of staffRoleIds()) {
-    overwrites.push({
-      id: roleId,
-      allow: [
-        PermissionsBitField.Flags.ViewChannel,
-        PermissionsBitField.Flags.SendMessages,
-        PermissionsBitField.Flags.ReadMessageHistory,
-      ],
-    });
+  for (const roleId of allStaffRoleIds()) {
+    overwrites.push({ id: roleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] });
   }
 
   const channel = await guild.channels.create({
@@ -148,12 +125,7 @@ async function handlePaymentSelect(interaction) {
   const pingRoleIds = [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
   const pingContent = `${interaction.user} ${pingRoleIds.map((id) => `<@&${id}>`).join(' ')}`.trim();
 
-  await channel.send({
-    content: pingContent,
-    embeds: [summaryEmbed],
-    components: [row],
-    allowedMentions: { users: [interaction.user.id], roles: pingRoleIds },
-  });
+  await channel.send({ content: pingContent, embeds: [summaryEmbed], components: [row], allowedMentions: { users: [interaction.user.id], roles: pingRoleIds } });
 
   await interaction.update({ content: `Your ticket has been created: ${channel}`, components: [] });
 }
@@ -165,9 +137,7 @@ async function handleClaim(interaction) {
 
   const ticket = getTicketByChannel(interaction.channelId);
   if (!ticket) return interaction.reply({ content: 'Ticket data not found.', ephemeral: true });
-  if (ticket.status === 'claimed') {
-    return interaction.reply({ content: 'This ticket is already claimed.', ephemeral: true });
-  }
+  if (ticket.status === 'claimed') return interaction.reply({ content: 'This ticket is already claimed.', ephemeral: true });
 
   claimTicket(interaction.channelId, interaction.user.id);
 
@@ -204,9 +174,7 @@ async function handleCancel(interaction) {
 
   const isBuyer = interaction.user.id === ticket.buyer_id;
   const isStaff = hasRank(interaction.member, RANKS.TRIAL_STAFF);
-  if (!isBuyer && !isStaff) {
-    return interaction.reply({ content: 'You cannot cancel this ticket.', ephemeral: true });
-  }
+  if (!isBuyer && !isStaff) return interaction.reply({ content: 'You cannot cancel this ticket.', ephemeral: true });
 
   const restoreRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`market_restore_${ticket.id}`).setLabel('Restore Ticket').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
@@ -230,9 +198,7 @@ async function handleCancel(interaction) {
       const logEmbed = baseEmbed(interaction.client, {
         color: THEME.colors.danger,
         title: '✖️ Ticket Cancelled',
-        description:
-          `**Buyer:** <@${ticket.buyer_id}> (\`${ticket.buyer_id}\`)\n` +
-          `**Item:** ${ticket.item_type}\n**Roblox Username:** ${ticket.roblox_username}\n**Payment:** ${ticket.payment_method}`,
+        description: `**Buyer:** <@${ticket.buyer_id}> (\`${ticket.buyer_id}\`)\n**Item:** ${ticket.item_type}\n**Roblox Username:** ${ticket.roblox_username}\n**Payment:** ${ticket.payment_method}`,
       });
       await logChannel.send({ embeds: [logEmbed] });
     } catch (err) {
@@ -275,9 +241,7 @@ async function handleRestore(interaction) {
   });
 
   const row = isClaimed
-    ? new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Secondary)
-      )
+    ? new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Secondary))
     : new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`market_claim_${ticket.id}`).setLabel('Claim Ticket').setEmoji('✅').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`market_cancel_${ticket.id}`).setLabel('Cancel Ticket').setEmoji('✖️').setStyle(ButtonStyle.Danger)
@@ -301,10 +265,7 @@ async function handleClose(interaction) {
     const logEmbed = baseEmbed(interaction.client, {
       color: THEME.colors.success,
       title: '🔒 Ticket Closed',
-      description:
-        `**Buyer:** <@${ticket.buyer_id}> (\`${ticket.buyer_id}\`)\n` +
-        `**Claimed by:** <@${ticket.claimed_by}>\n**Closed by:** ${interaction.user}\n` +
-        `**Item:** ${ticket.item_type}\n**Roblox Username:** ${ticket.roblox_username}\n**Payment:** ${ticket.payment_method}`,
+      description: `**Buyer:** <@${ticket.buyer_id}> (\`${ticket.buyer_id}\`)\n**Claimed by:** <@${ticket.claimed_by}>\n**Closed by:** ${interaction.user}\n**Item:** ${ticket.item_type}\n**Roblox Username:** ${ticket.roblox_username}\n**Payment:** ${ticket.payment_method}`,
     });
     await logChannel.send({ embeds: [logEmbed] });
   } catch (err) {

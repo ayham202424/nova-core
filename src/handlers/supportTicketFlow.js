@@ -10,7 +10,7 @@ const {
   AttachmentBuilder,
 } = require('discord.js');
 const config = require('../config');
-const { hasRank, RANKS, getRank } = require('../utils/permissions');
+const { hasRank, RANKS, RANK_NAMES, getRank, allStaffRoleIds } = require('../utils/permissions');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const { SUPPORT_CATEGORIES } = require('../utils/supportCategories');
 const {
@@ -28,11 +28,7 @@ const {
   getStaffStats,
 } = require('../database/db');
 
-const RANK_NAMES = { 1: 'Trial Staff', 2: 'Staff', 3: 'Mod', 4: 'Head Mod', 5: 'Manager', 6: 'Owner' };
 const pendingRating = new Map();
-
-const staffRoleIds = () =>
-  [config.roles.trialStaff, config.roles.staff, config.roles.mod, config.roles.headMod, config.roles.manager].filter(Boolean);
 
 function formatAnswers(category, answersObj) {
   const cat = SUPPORT_CATEGORIES[category];
@@ -56,10 +52,7 @@ async function handleOpenClick(interaction) {
 
   const existing = getOpenSupportTicketByUser(interaction.user.id);
   if (existing) {
-    return interaction.reply({
-      content: `You already have an open ticket: <#${existing.channel_id}>. Please wait for it to finish before opening another.`,
-      ephemeral: true,
-    });
+    return interaction.reply({ content: `You already have an open ticket: <#${existing.channel_id}>. Please wait for it to finish before opening another.`, ephemeral: true });
   }
 
   const modal = new ModalBuilder().setCustomId(`support_modal_${key}`).setTitle(category.label.slice(0, 45));
@@ -98,7 +91,7 @@ async function handleModalSubmit(interaction) {
   const ticketId = createSupportTicket({ openerId: interaction.user.id, category: key, answers });
   const guild = interaction.guild;
 
-  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : staffRoleIds();
+  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : allStaffRoleIds();
 
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -109,10 +102,7 @@ async function handleModalSubmit(interaction) {
     },
   ];
   for (const roleId of roleIdsForCategory) {
-    overwrites.push({
-      id: roleId,
-      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
-    });
+    overwrites.push({ id: roleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] });
   }
 
   const channel = await guild.channels.create({
@@ -138,17 +128,10 @@ async function handleModalSubmit(interaction) {
     new ButtonBuilder().setCustomId(`support_cancel_${ticketId}`).setLabel('Cancel Ticket').setEmoji('✖️').setStyle(ButtonStyle.Danger)
   );
 
-  const pingRoleIds = category.staffOnly
-    ? [config.roles.manager].filter(Boolean)
-    : [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
+  const pingRoleIds = category.staffOnly ? [config.roles.manager].filter(Boolean) : [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
   const pingContent = `${interaction.user} ${pingRoleIds.map((id) => `<@&${id}>`).join(' ')}`.trim();
 
-  await channel.send({
-    content: pingContent,
-    embeds: [embed],
-    components: [row],
-    allowedMentions: { users: [interaction.user.id], roles: pingRoleIds },
-  });
+  await channel.send({ content: pingContent, embeds: [embed], components: [row], allowedMentions: { users: [interaction.user.id], roles: pingRoleIds } });
 
   try {
     const logChannel = await interaction.client.channels.fetch(config.channels.supportTicketLogs);
@@ -180,7 +163,7 @@ async function handleClaim(interaction) {
 
   const category = SUPPORT_CATEGORIES[ticket.category];
   if (category.staffOnly && !hasRank(interaction.member, RANKS.MANAGER)) {
-    return interaction.reply({ content: 'Only a Manager can claim this ticket type.', ephemeral: true });
+    return interaction.reply({ content: 'Only a Manager or higher can claim this ticket type.', ephemeral: true });
   }
 
   claimSupportTicket(ticketId, interaction.user.id);
@@ -208,9 +191,7 @@ async function handleClaim(interaction) {
           stats.avgRating ? `⭐ ${stats.avgRating} (${stats.ratingCount} ratings)` : 'No ratings yet'
         }`,
       },
-      ...(category.staffOnly
-        ? []
-        : [{ name: 'Was this staff member unfair or made a mistake?', value: `Open an "Other" ticket via <#${config.channels.supportPanel}> to report it.` }]),
+      ...(category.staffOnly ? [] : [{ name: 'Was this staff member unfair or made a mistake?', value: `Open an "Other" ticket via <#${config.channels.supportPanel}> to report it.` }]),
     ],
     thumbnail: interaction.user.displayAvatarURL({ size: 128 }),
   });
@@ -230,9 +211,7 @@ async function handleCancel(interaction) {
 
   const isOpener = interaction.user.id === ticket.opener_id;
   const isStaff = hasRank(interaction.member, RANKS.TRIAL_STAFF);
-  if (!isOpener && !isStaff) {
-    return interaction.reply({ content: 'You cannot cancel this ticket.', ephemeral: true });
-  }
+  if (!isOpener && !isStaff) return interaction.reply({ content: 'You cannot cancel this ticket.', ephemeral: true });
 
   cancelSupportTicket(ticketId);
 
@@ -270,9 +249,7 @@ async function handleComplete(interaction) {
   });
 
   const row = new ActionRowBuilder().addComponents(
-    [1, 2, 3, 4, 5].map((n) =>
-      new ButtonBuilder().setCustomId(`support_rate_${n}_${ticketId}`).setLabel('⭐'.repeat(n)).setStyle(ButtonStyle.Secondary)
-    )
+    [1, 2, 3, 4, 5].map((n) => new ButtonBuilder().setCustomId(`support_rate_${n}_${ticketId}`).setLabel('⭐'.repeat(n)).setStyle(ButtonStyle.Secondary))
   );
 
   await interaction.reply({ embeds: [embed], components: [row] });
@@ -290,12 +267,7 @@ async function handleRate(interaction) {
   pendingRating.set(interaction.user.id, { ticketId: parseInt(ticketId, 10), rating: parseInt(rating, 10) });
 
   const modal = new ModalBuilder().setCustomId(`support_feedback_modal_${ticketId}`).setTitle('Optional Feedback');
-  const input = new TextInputBuilder()
-    .setCustomId('feedback_text')
-    .setLabel('Any comments? (optional)')
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(false)
-    .setMaxLength(500);
+  const input = new TextInputBuilder().setCustomId('feedback_text').setLabel('Any comments? (optional)').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(500);
   modal.addComponents(new ActionRowBuilder().addComponents(input));
 
   await interaction.showModal(modal);
@@ -317,11 +289,7 @@ async function handleFeedbackSubmit(interaction) {
     const embed = baseEmbed(interaction.client, {
       color: THEME.colors.success,
       title: `🏁 Ticket #${ticketId} — Completed`,
-      description:
-        `**Category:** ${SUPPORT_CATEGORIES[ticket.category].label}\n` +
-        `**Opener:** <@${ticket.opener_id}> (\`${ticket.opener_id}\`)\n` +
-        `**Claimed by:** <@${ticket.claimed_by}> (\`${ticket.claimed_by}\`)\n` +
-        `**Rating:** ${rating ? '⭐'.repeat(rating) : 'Not rated'}`,
+      description: `**Category:** ${SUPPORT_CATEGORIES[ticket.category].label}\n**Opener:** <@${ticket.opener_id}> (\`${ticket.opener_id}\`)\n**Claimed by:** <@${ticket.claimed_by}> (\`${ticket.claimed_by}\`)\n**Rating:** ${rating ? '⭐'.repeat(rating) : 'Not rated'}`,
       fields: feedback ? [{ name: 'Feedback', value: feedback }] : [],
     });
     await logChannel.send({ embeds: [embed], components: [reopenButtonRow(ticketId)] });
@@ -329,12 +297,7 @@ async function handleFeedbackSubmit(interaction) {
     console.error('Failed to log completed support ticket:', err);
   }
 
-  const thanksEmbed = baseEmbed(interaction.client, {
-    color: THEME.colors.success,
-    title: 'Thank You!',
-    description: 'Thanks for your feedback — this ticket will close shortly.',
-  });
-
+  const thanksEmbed = baseEmbed(interaction.client, { color: THEME.colors.success, title: 'Thank You!', description: 'Thanks for your feedback — this ticket will close shortly.' });
   await interaction.reply({ embeds: [thanksEmbed] });
   setTimeout(() => interaction.channel.delete().catch(() => {}), 8000);
 }
@@ -351,12 +314,7 @@ async function handleCloseInvalid(interaction) {
   }
 
   const modal = new ModalBuilder().setCustomId(`support_invalid_modal_${ticketId}`).setTitle('Reason for Closing');
-  const input = new TextInputBuilder()
-    .setCustomId('invalid_reason')
-    .setLabel('Why is this ticket being closed as invalid?')
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true)
-    .setMaxLength(300);
+  const input = new TextInputBuilder().setCustomId('invalid_reason').setLabel('Why is this ticket being closed as invalid?').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(300);
   modal.addComponents(new ActionRowBuilder().addComponents(input));
 
   await interaction.showModal(modal);
@@ -374,10 +332,7 @@ async function handleInvalidModalSubmit(interaction) {
     const embed = baseEmbed(interaction.client, {
       color: THEME.colors.danger,
       title: `🗑️ Ticket #${ticketId} — Closed as Invalid`,
-      description:
-        `**Category:** ${SUPPORT_CATEGORIES[ticket.category].label}\n` +
-        `**Opener:** <@${ticket.opener_id}> (\`${ticket.opener_id}\`)\n` +
-        `**Closed by:** ${interaction.user} (\`${interaction.user.id}\`)`,
+      description: `**Category:** ${SUPPORT_CATEGORIES[ticket.category].label}\n**Opener:** <@${ticket.opener_id}> (\`${ticket.opener_id}\`)\n**Closed by:** ${interaction.user} (\`${interaction.user.id}\`)`,
       fields: [{ name: 'Reason', value: reason }],
     });
     await logChannel.send({ embeds: [embed], components: [reopenButtonRow(ticketId)] });
@@ -402,19 +357,13 @@ async function reopenTicketChannel(client, guild, ticketId) {
   const answers = JSON.parse(ticket.answers);
   const messages = getTicketMessages(ticketId);
 
-  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : staffRoleIds();
+  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : allStaffRoleIds();
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-    {
-      id: ticket.opener_id,
-      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
-    },
+    { id: ticket.opener_id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] },
   ];
   for (const roleId of roleIdsForCategory) {
-    overwrites.push({
-      id: roleId,
-      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
-    });
+    overwrites.push({ id: roleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] });
   }
 
   const channel = await guild.channels.create({

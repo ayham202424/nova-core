@@ -22,9 +22,7 @@ module.exports = {
     const staffMember = interaction.member;
 
     const targetUser = await interaction.client.users.fetch(targetUserId).catch(() => null);
-    if (!targetUser) {
-      return interaction.reply({ content: 'Could not find that user anymore.', ephemeral: true });
-    }
+    if (!targetUser) return interaction.reply({ content: 'Could not find that user anymore.', ephemeral: true });
 
     await interaction.deferReply({ ephemeral: true });
 
@@ -35,9 +33,7 @@ module.exports = {
     const fullReason = `${reason}\n\n${proofNote}`;
 
     if (prefix === 'ctxwarn') {
-      if (!hasRank(staffMember, RANKS.TRIAL_STAFF)) {
-        return interaction.editReply({ content: 'You do not have permission to do this.' });
-      }
+      if (!hasRank(staffMember, RANKS.TRIAL_STAFF)) return interaction.editReply({ content: 'You do not have permission to do this.' });
       const { level, streak, timeoutApplied } = await issueWarn({
         client: interaction.client,
         guild: interaction.guild,
@@ -50,17 +46,13 @@ module.exports = {
       const confirmEmbed = baseEmbed(interaction.client, {
         color: level.color,
         title: `${level.emoji} Warn Applied`,
-        description:
-          `${targetUser} has been warned (**${level.name}**, streak #${streak}). Timeout: ${formatDuration(level.timeoutMinutes)}` +
-          (timeoutApplied ? '' : ' — ⚠️ failed to apply'),
+        description: `${targetUser} has been warned (**${level.name}**, streak #${streak}). Timeout: ${formatDuration(level.timeoutMinutes)}` + (timeoutApplied ? '' : ' — ⚠️ failed to apply'),
       });
       return interaction.editReply({ embeds: [confirmEmbed] });
     }
 
     if (prefix === 'ctxkick') {
-      if (!hasRank(staffMember, RANKS.STAFF)) {
-        return interaction.editReply({ content: 'You need at least Staff rank to do this.' });
-      }
+      if (!hasRank(staffMember, RANKS.MOD)) return interaction.editReply({ content: 'You need at least Mod rank to do this.' });
       const targetMember = await interaction.guild.members.fetch(targetUserId).catch(() => null);
       if (!targetMember) return interaction.editReply({ content: 'That user is not in the server.' });
 
@@ -107,9 +99,7 @@ module.exports = {
     }
 
     if (prefix === 'ctxban') {
-      if (!hasRank(staffMember, RANKS.MOD)) {
-        return interaction.editReply({ content: 'You need at least Mod rank to do this.' });
-      }
+      if (!hasRank(staffMember, RANKS.HEAD_MOD)) return interaction.editReply({ content: 'You need at least Head Mod rank to do this.' });
 
       let dmSent = true;
       try {

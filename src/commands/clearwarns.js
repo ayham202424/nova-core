@@ -12,8 +12,8 @@ module.exports = {
     .addStringOption((opt) => opt.setName('reason').setDescription('Why are you clearing this history?').setRequired(true)),
 
   async execute(interaction) {
-    if (!hasRank(interaction.member, RANKS.HEAD_MOD)) {
-      return interaction.reply({ content: 'You need at least Head Mod rank to use this command.', ephemeral: true });
+    if (!hasRank(interaction.member, RANKS.COMMUNITY_MANAGER)) {
+      return interaction.reply({ content: 'You need at least Community Manager rank to use this command.', ephemeral: true });
     }
 
     const targetUser = interaction.options.getUser('user');
@@ -27,10 +27,7 @@ module.exports = {
         authorName: targetUser.tag,
         authorIcon: targetUser.displayAvatarURL(),
         title: '🧹 Warning History Cleared',
-        description:
-          `**User:** ${targetUser} (\`${targetUser.id}\`)\n` +
-          `**Cleared by:** ${interaction.user} (\`${interaction.user.id}\`)\n` +
-          `**Warnings removed:** ${removedCount}`,
+        description: `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Cleared by:** ${interaction.user} (\`${interaction.user.id}\`)\n**Warnings removed:** ${removedCount}`,
         fields: [{ name: 'Reason', value: reason }],
       });
       await logChannel.send({ embeds: [logEmbed] });

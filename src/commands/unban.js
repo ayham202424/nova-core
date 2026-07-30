@@ -12,8 +12,8 @@ module.exports = {
 
   async execute(interaction) {
     const staffMember = interaction.member;
-    if (!hasRank(staffMember, RANKS.MOD)) {
-      return interaction.reply({ content: 'You need at least Mod rank to use this command.', ephemeral: true });
+    if (!hasRank(staffMember, RANKS.HEAD_MOD)) {
+      return interaction.reply({ content: 'You need at least Head Mod rank to use this command.', ephemeral: true });
     }
 
     const userId = interaction.options.getString('userid');
@@ -34,9 +34,7 @@ module.exports = {
       const logEmbed = baseEmbed(interaction.client, {
         color: THEME.colors.success,
         title: unbanned ? '🕊️ Member Unbanned' : '⚠️ Unban Failed',
-        description:
-          `**User ID:** \`${userId}\`\n` +
-          `**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)`,
+        description: `**User ID:** \`${userId}\`\n**Moderator:** ${staffMember.user} (\`${staffMember.id}\`)`,
         fields: [{ name: 'Reason', value: reason }],
       });
       await logChannel.send({ embeds: [logEmbed] });
