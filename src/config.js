@@ -23,6 +23,9 @@ module.exports = {
     ticketsCategory: process.env.TICKETS_CATEGORY_ID,
     ticketLogs: process.env.TICKET_LOGS_CHANNEL_ID,
     pingSettings: process.env.PING_SETTINGS_CHANNEL_ID,
+    supportPanel: process.env.SUPPORT_PANEL_CHANNEL_ID,
+    supportTicketsCategory: process.env.SUPPORT_TICKETS_CATEGORY_ID,
+    supportTicketLogs: process.env.SUPPORT_TICKET_LOGS_CHANNEL_ID,
   },
 
   roles: {

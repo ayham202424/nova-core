@@ -8,6 +8,7 @@ const ticketFlow = require('../handlers/ticketFlow');
 const pingSettingsHandler = require('../handlers/pingSettingsHandler');
 const announcementFlow = require('../handlers/announcementFlow');
 const taskFlow = require('../handlers/taskFlow');
+const supportTicketFlow = require('../handlers/supportTicketFlow');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
@@ -52,6 +53,12 @@ module.exports = {
       if (interaction.customId.startsWith('task_claim_')) return taskFlow.handleClaim(interaction);
       if (interaction.customId.startsWith('task_done_')) return taskFlow.handleDone(interaction);
       if (interaction.customId.startsWith('task_cancel_')) return taskFlow.handleCancel(interaction);
+      if (interaction.customId.startsWith('support_open_')) return supportTicketFlow.handleOpenClick(interaction);
+      if (interaction.customId.startsWith('support_claim_')) return supportTicketFlow.handleClaim(interaction);
+      if (interaction.customId.startsWith('support_cancel_')) return supportTicketFlow.handleCancel(interaction);
+      if (interaction.customId.startsWith('support_complete_')) return supportTicketFlow.handleComplete(interaction);
+      if (interaction.customId.startsWith('support_closeinvalid_')) return supportTicketFlow.handleCloseInvalid(interaction);
+      if (interaction.customId.startsWith('support_rate_')) return supportTicketFlow.handleRate(interaction);
       return;
     }
 
@@ -79,6 +86,9 @@ module.exports = {
         return contextModalHandler.handleContextModal(interaction);
       }
       if (interaction.customId.startsWith('market_username_modal_')) return ticketFlow.handleUsernameModalSubmit(interaction);
+      if (interaction.customId.startsWith('support_modal_')) return supportTicketFlow.handleModalSubmit(interaction);
+      if (interaction.customId.startsWith('support_feedback_modal_')) return supportTicketFlow.handleFeedbackSubmit(interaction);
+      if (interaction.customId.startsWith('support_invalid_modal_')) return supportTicketFlow.handleInvalidModalSubmit(interaction);
     }
   },
 };

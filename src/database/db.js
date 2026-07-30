@@ -22,6 +22,9 @@ db.exec(`
 const migrations = [
   "ALTER TABLE users ADD COLUMN warn_streak INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN last_warn_at TEXT",
+  "ALTER TABLE users ADD COLUMN tickets_claimed_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN rating_sum INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN rating_count INTEGER DEFAULT 0",
 ];
 for (const sql of migrations) {
   try {
@@ -77,6 +80,35 @@ db.exec(`
     created_at TEXT NOT NULL,
     completed_at TEXT,
     cancelled_at TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id TEXT,
+    opener_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    answers TEXT NOT NULL,
+    status TEXT DEFAULT 'open',
+    claimed_by TEXT,
+    created_at TEXT NOT NULL,
+    claimed_at TEXT,
+    closed_at TEXT,
+    rating INTEGER,
+    feedback TEXT,
+    close_reason TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ticket_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    author_id TEXT NOT NULL,
+    author_tag TEXT NOT NULL,
+    content TEXT,
+    timestamp TEXT NOT NULL
   );
 `);
 
@@ -210,6 +242,90 @@ function cancelTask(taskId) {
   db.prepare("UPDATE tasks SET status = 'cancelled', cancelled_at = ? WHERE id = ?").run(new Date().toISOString(), taskId);
 }
 
+function incrementTicketsOpened(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET tickets_opened = tickets_opened + 1 WHERE user_id = ?').run(userId);
+}
+
+function createSupportTicket({ openerId, category, answers }) {
+  incrementTicketsOpened(openerId);
+  const info = db.prepare(
+    `INSERT INTO support_tickets (opener_id, category, answers, created_at) VALUES (?, ?, ?, ?)`
+  ).run(openerId, category, JSON.stringify(answers), new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setSupportTicketChannel(ticketId, channelId) {
+  db.prepare('UPDATE support_tickets SET channel_id = ? WHERE id = ?').run(channelId, ticketId);
+}
+
+function getOpenSupportTicketByUser(userId) {
+  return db.prepare("SELECT * FROM support_tickets WHERE opener_id = ? AND status IN ('open', 'claimed')").get(userId);
+}
+
+function getSupportTicketByChannel(channelId) {
+  return db.prepare('SELECT * FROM support_tickets WHERE channel_id = ?').get(channelId);
+}
+
+function getSupportTicket(ticketId) {
+  return db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(ticketId);
+}
+
+function claimSupportTicket(ticketId, staffId) {
+  db.prepare("UPDATE support_tickets SET status = 'claimed', claimed_by = ?, claimed_at = ? WHERE id = ?").run(
+    staffId,
+    new Date().toISOString(),
+    ticketId
+  );
+  getOrCreateUser(staffId);
+  db.prepare('UPDATE users SET tickets_claimed_count = tickets_claimed_count + 1 WHERE user_id = ?').run(staffId);
+}
+
+function completeSupportTicket(ticketId, rating, feedback) {
+  const ticket = getSupportTicket(ticketId);
+  db.prepare("UPDATE support_tickets SET status = 'completed', closed_at = ?, rating = ?, feedback = ? WHERE id = ?").run(
+    new Date().toISOString(),
+    rating || null,
+    feedback || null,
+    ticketId
+  );
+  if (ticket && ticket.claimed_by && rating) {
+    getOrCreateUser(ticket.claimed_by);
+    db.prepare('UPDATE users SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE user_id = ?').run(rating, ticket.claimed_by);
+  }
+}
+
+function closeInvalidSupportTicket(ticketId, reason) {
+  db.prepare("UPDATE support_tickets SET status = 'closed_invalid', closed_at = ?, close_reason = ? WHERE id = ?").run(
+    new Date().toISOString(),
+    reason,
+    ticketId
+  );
+}
+
+function cancelSupportTicket(ticketId) {
+  db.prepare("UPDATE support_tickets SET status = 'cancelled', closed_at = ? WHERE id = ?").run(new Date().toISOString(), ticketId);
+}
+
+function addTicketMessage(ticketId, authorId, authorTag, content) {
+  db.prepare(
+    `INSERT INTO ticket_messages (ticket_id, author_id, author_tag, content, timestamp) VALUES (?, ?, ?, ?, ?)`
+  ).run(ticketId, authorId, authorTag, content, new Date().toISOString());
+}
+
+function getTicketMessages(ticketId) {
+  return db.prepare('SELECT * FROM ticket_messages WHERE ticket_id = ? ORDER BY id ASC').all(ticketId);
+}
+
+function getStaffStats(staffId) {
+  const user = getOrCreateUser(staffId);
+  return {
+    ticketsClaimedCount: user.tickets_claimed_count || 0,
+    ratingCount: user.rating_count || 0,
+    avgRating: user.rating_count > 0 ? (user.rating_sum / user.rating_count).toFixed(1) : null,
+  };
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -234,4 +350,17 @@ module.exports = {
   claimTask,
   completeTask,
   cancelTask,
+  incrementTicketsOpened,
+  createSupportTicket,
+  setSupportTicketChannel,
+  getOpenSupportTicketByUser,
+  getSupportTicketByChannel,
+  getSupportTicket,
+  claimSupportTicket,
+  completeSupportTicket,
+  closeInvalidSupportTicket,
+  cancelSupportTicket,
+  addTicketMessage,
+  getTicketMessages,
+  getStaffStats,
 };
