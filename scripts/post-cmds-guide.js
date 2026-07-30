@@ -10,9 +10,7 @@ async function clearOldMessages(channel) {
     const ownMessages = messages.filter((m) => m.author.id === channel.client.user.id);
     if (ownMessages.size > 0) {
       await channel.bulkDelete(ownMessages, true).catch(async () => {
-        for (const [, msg] of ownMessages) {
-          await msg.delete().catch(() => {});
-        }
+        for (const [, msg] of ownMessages) await msg.delete().catch(() => {});
       });
     }
   } catch (err) {
@@ -48,8 +46,7 @@ client.once(Events.ClientReady, async () => {
     const rightClickTools = baseEmbed(client, {
       color: THEME.colors.primary,
       title: 'Right-Click Proof Tools',
-      description:
-        'Right-click any message → **Apps** → choose one of the tools below. The clicked message is automatically attached as proof — no manual screenshot needed.',
+      description: 'Right-click any message → **Apps** → choose a tool. The clicked message is automatically attached as proof.',
       fields: [
         { name: 'Warn (use as proof)', value: '**Requires:** Trial Staff+' },
         { name: 'Kick (use as proof)', value: '**Requires:** Staff+' },
@@ -57,41 +54,41 @@ client.once(Events.ClientReady, async () => {
       ],
     });
 
+    const ticketCommands = baseEmbed(client, {
+      color: THEME.colors.primary,
+      title: 'Ticket Management',
+      fields: [
+        { name: '/reopenticket `ticketid`', value: 'Reopens a closed support ticket with its full past chat history attached as a file. A "Reopen" button is also available directly on every entry in support-ticket-logs. **Requires:** Staff+' },
+        { name: '/restoreticket `ticketid`', value: 'Quickly view a ticket\'s full transcript as a file, without reopening a channel. **Requires:** Staff+' },
+      ],
+    });
+
     const managementCommands = baseEmbed(client, {
       color: THEME.colors.primary,
       title: 'Staff & Management Tools',
       fields: [
-        {
-          name: '/announcement `title` `message` `color` `banner` `file`',
-          value:
-            'Creates a formatted announcement. After running the command, choose the target channel and which ping role(s) to notify ' +
-            '(or override with "Ping Everyone"), then confirm before it sends. **Requires:** Manager+',
-        },
-        {
-          name: '/task `title` `description` `assign_role` `deadline_minutes`',
-          value:
-            'Posts a claimable task. First eligible person to click "Claim" gets it assigned; the claimer or a Manager can mark it done, ' +
-            'a Manager can cancel it anytime. **Requires:** Manager+',
-        },
+        { name: '/announcement `title` `message` `color` `banner` `file`', value: 'Creates a formatted announcement with channel & ping selection. **Requires:** Manager+' },
+        { name: '/task `title` `description` `assign_role` `deadline_minutes`', value: 'Posts a claimable task for staff/developers. **Requires:** Manager+' },
       ],
     });
 
-    const notes = baseEmbed(client, {
+    const autoSystems = baseEmbed(client, {
       color: THEME.colors.warning,
-      title: 'Good to Know',
+      title: 'Automated Security Systems',
       description:
-        '✦ Every moderation command logs automatically to the Cmds Logs channel — no manual logging needed.\n' +
-        '✦ The affected user is always DMed automatically with the reason and proof.\n' +
-        '✦ You cannot moderate someone of equal or higher rank than you.\n' +
-        '✦ Run `/help` anywhere for a quick on-demand summary of everything above.\n' +
-        '✦ This guide updates as new systems (leveling, ban appeals) are added.',
+        '✦ **Spam protection:** 4+ messages in 5 seconds → first offense in 24h gets a 30-second cooldown with a warning DM (no formal warn). ' +
+        'If it happens again within 24 hours, real escalating warns kick in.\n' +
+        '✦ **Language filter:** prohibited words are automatically removed and result in a warn, same escalation as manual warns.\n' +
+        '✦ **Suspicious activity flags:** users automatically get flagged here with full context once they reach 3, 5, 8, or 12 total warnings.\n' +
+        '✦ Every moderation action logs automatically — no manual logging needed. Run `/help` anywhere for a quick summary.',
     });
 
     await channel.send({ embeds: [intro] });
     await channel.send({ embeds: [modCommands] });
     await channel.send({ embeds: [rightClickTools] });
+    await channel.send({ embeds: [ticketCommands] });
     await channel.send({ embeds: [managementCommands] });
-    await channel.send({ embeds: [notes] });
+    await channel.send({ embeds: [autoSystems] });
     console.log('Cmds guide updated successfully.');
   } catch (err) {
     console.error('Failed to post cmds guide:', err);

@@ -7,6 +7,7 @@ const {
   ButtonStyle,
   ChannelType,
   PermissionsBitField,
+  AttachmentBuilder,
 } = require('discord.js');
 const config = require('../config');
 const { hasRank, RANKS, getRank } = require('../utils/permissions');
@@ -22,6 +23,8 @@ const {
   completeSupportTicket,
   closeInvalidSupportTicket,
   cancelSupportTicket,
+  reopenSupportTicket,
+  getTicketMessages,
   getStaffStats,
 } = require('../database/db');
 
@@ -36,10 +39,20 @@ function formatAnswers(category, answersObj) {
   return cat.fields.map((f) => ({ name: f.label, value: answersObj[f.id] || '*Not answered*' }));
 }
 
+function reopenButtonRow(ticketId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`support_reopen_${ticketId}`).setLabel('Reopen (if closed)').setEmoji('🔓').setStyle(ButtonStyle.Secondary)
+  );
+}
+
 async function handleOpenClick(interaction) {
   const key = interaction.customId.replace('support_open_', '');
   const category = SUPPORT_CATEGORIES[key];
   if (!category) return;
+
+  if (category.staffOnly && !hasRank(interaction.member, RANKS.TRIAL_STAFF)) {
+    return interaction.reply({ content: 'Only staff members can open this ticket type.', ephemeral: true });
+  }
 
   const existing = getOpenSupportTicketByUser(interaction.user.id);
   if (existing) {
@@ -85,6 +98,8 @@ async function handleModalSubmit(interaction) {
   const ticketId = createSupportTicket({ openerId: interaction.user.id, category: key, answers });
   const guild = interaction.guild;
 
+  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : staffRoleIds();
+
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
     {
@@ -93,7 +108,7 @@ async function handleModalSubmit(interaction) {
       deny: [PermissionsBitField.Flags.SendMessages],
     },
   ];
-  for (const roleId of staffRoleIds()) {
+  for (const roleId of roleIdsForCategory) {
     overwrites.push({
       id: roleId,
       allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
@@ -101,7 +116,7 @@ async function handleModalSubmit(interaction) {
   }
 
   const channel = await guild.channels.create({
-    name: `${key}-${interaction.user.username}`.slice(0, 90),
+    name: `${category.prefix}-${interaction.user.username}`.slice(0, 90),
     type: ChannelType.GuildText,
     parent: config.channels.supportTicketsCategory,
     permissionOverwrites: overwrites,
@@ -123,7 +138,9 @@ async function handleModalSubmit(interaction) {
     new ButtonBuilder().setCustomId(`support_cancel_${ticketId}`).setLabel('Cancel Ticket').setEmoji('✖️').setStyle(ButtonStyle.Danger)
   );
 
-  const pingRoleIds = [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
+  const pingRoleIds = category.staffOnly
+    ? [config.roles.manager].filter(Boolean)
+    : [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
   const pingContent = `${interaction.user} ${pingRoleIds.map((id) => `<@&${id}>`).join(' ')}`.trim();
 
   await channel.send({
@@ -132,6 +149,21 @@ async function handleModalSubmit(interaction) {
     components: [row],
     allowedMentions: { users: [interaction.user.id], roles: pingRoleIds },
   });
+
+  try {
+    const logChannel = await interaction.client.channels.fetch(config.channels.supportTicketLogs);
+    const logEmbed = baseEmbed(interaction.client, {
+      color: THEME.colors.warning,
+      authorName: interaction.user.tag,
+      authorIcon: interaction.user.displayAvatarURL(),
+      title: `🆕 ${category.emoji} Ticket #${ticketId} Opened — ${category.label}`,
+      description: `**Opener:** ${interaction.user} (\`${interaction.user.id}\`)\n**Channel:** ${channel}`,
+      fields: formatAnswers(key, answers),
+    });
+    await logChannel.send({ embeds: [logEmbed], components: [reopenButtonRow(ticketId)] });
+  } catch (err) {
+    console.error('Failed to send ticket-opened log:', err);
+  }
 
   await interaction.editReply({ content: `Your ticket has been created: ${channel}` });
 }
@@ -146,6 +178,11 @@ async function handleClaim(interaction) {
   if (!ticket) return interaction.reply({ content: 'Ticket data not found.', ephemeral: true });
   if (ticket.status !== 'open') return interaction.reply({ content: 'This ticket is already claimed or closed.', ephemeral: true });
 
+  const category = SUPPORT_CATEGORIES[ticket.category];
+  if (category.staffOnly && !hasRank(interaction.member, RANKS.MANAGER)) {
+    return interaction.reply({ content: 'Only a Manager can claim this ticket type.', ephemeral: true });
+  }
+
   claimSupportTicket(ticketId, interaction.user.id);
 
   try {
@@ -155,7 +192,6 @@ async function handleClaim(interaction) {
   }
 
   const stats = getStaffStats(interaction.user.id);
-  const category = SUPPORT_CATEGORIES[ticket.category];
   const answers = JSON.parse(ticket.answers);
 
   const embed = baseEmbed(interaction.client, {
@@ -172,7 +208,9 @@ async function handleClaim(interaction) {
           stats.avgRating ? `⭐ ${stats.avgRating} (${stats.ratingCount} ratings)` : 'No ratings yet'
         }`,
       },
-      { name: 'Was this staff member unfair or made a mistake?', value: `Open an "Other" ticket via <#${config.channels.supportPanel}> to report it.` },
+      ...(category.staffOnly
+        ? []
+        : [{ name: 'Was this staff member unfair or made a mistake?', value: `Open an "Other" ticket via <#${config.channels.supportPanel}> to report it.` }]),
     ],
     thumbnail: interaction.user.displayAvatarURL({ size: 128 }),
   });
@@ -205,7 +243,7 @@ async function handleCancel(interaction) {
       title: `✖️ Ticket #${ticketId} — Cancelled`,
       description: `**Opener:** <@${ticket.opener_id}> (\`${ticket.opener_id}\`)\n**Category:** ${SUPPORT_CATEGORIES[ticket.category].label}`,
     });
-    await logChannel.send({ embeds: [embed] });
+    await logChannel.send({ embeds: [embed], components: [reopenButtonRow(ticketId)] });
   } catch (err) {
     console.error('Failed to log cancelled support ticket:', err);
   }
@@ -228,7 +266,7 @@ async function handleComplete(interaction) {
   const embed = baseEmbed(interaction.client, {
     color: THEME.colors.primary,
     title: 'How was your experience?',
-    description: `${'⭐'.repeat(0)}Please rate the support you received, <@${ticket.opener_id}>. Click a star rating below.`,
+    description: `Please rate the support you received, <@${ticket.opener_id}>. Click a star rating below.`,
   });
 
   const row = new ActionRowBuilder().addComponents(
@@ -286,7 +324,7 @@ async function handleFeedbackSubmit(interaction) {
         `**Rating:** ${rating ? '⭐'.repeat(rating) : 'Not rated'}`,
       fields: feedback ? [{ name: 'Feedback', value: feedback }] : [],
     });
-    await logChannel.send({ embeds: [embed] });
+    await logChannel.send({ embeds: [embed], components: [reopenButtonRow(ticketId)] });
   } catch (err) {
     console.error('Failed to log completed support ticket:', err);
   }
@@ -342,13 +380,100 @@ async function handleInvalidModalSubmit(interaction) {
         `**Closed by:** ${interaction.user} (\`${interaction.user.id}\`)`,
       fields: [{ name: 'Reason', value: reason }],
     });
-    await logChannel.send({ embeds: [embed] });
+    await logChannel.send({ embeds: [embed], components: [reopenButtonRow(ticketId)] });
   } catch (err) {
     console.error('Failed to log invalid support ticket:', err);
   }
 
   await interaction.reply({ content: 'Closing ticket in 5 seconds...' });
   setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+}
+
+async function reopenTicketChannel(client, guild, ticketId) {
+  const ticket = getSupportTicket(ticketId);
+  if (!ticket) return { error: `No ticket found with ID \`${ticketId}\`.` };
+
+  if (ticket.channel_id) {
+    const existingChannel = await client.channels.fetch(ticket.channel_id).catch(() => null);
+    if (existingChannel) return { channel: existingChannel, alreadyOpen: true };
+  }
+
+  const category = SUPPORT_CATEGORIES[ticket.category];
+  const answers = JSON.parse(ticket.answers);
+  const messages = getTicketMessages(ticketId);
+
+  const roleIdsForCategory = category.staffOnly ? [config.roles.manager].filter(Boolean) : staffRoleIds();
+  const overwrites = [
+    { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+    {
+      id: ticket.opener_id,
+      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
+    },
+  ];
+  for (const roleId of roleIdsForCategory) {
+    overwrites.push({
+      id: roleId,
+      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
+    });
+  }
+
+  const channel = await guild.channels.create({
+    name: `${category.prefix}-${ticketId}-reopened`.slice(0, 90),
+    type: ChannelType.GuildText,
+    parent: config.channels.supportTicketsCategory,
+    permissionOverwrites: overwrites,
+  });
+
+  const transcriptText = [
+    `Ticket #${ticketId} — ${category.label}`,
+    `Original status: ${ticket.status}`,
+    '',
+    '--- Initial Answers ---',
+    ...category.fields.map((f) => `${f.label}: ${answers[f.id] || '(not answered)'}`),
+    '',
+    '--- Past Chat Transcript ---',
+    ...(messages.length ? messages.map((m) => `[${m.timestamp}] ${m.author_tag}: ${m.content}`) : ['(no messages were sent)']),
+  ].join('\n');
+
+  const transcriptFile = new AttachmentBuilder(Buffer.from(transcriptText, 'utf-8'), { name: `ticket-${ticketId}-history.txt` });
+
+  const statusEmbed = baseEmbed(client, {
+    color: THEME.colors.warning,
+    title: `🔓 ${category.emoji} Ticket #${ticketId} — Reopened`,
+    description: 'This ticket has been reopened. Past history is attached below as a file.',
+    fields: [
+      { name: 'Opener', value: `<@${ticket.opener_id}>` },
+      { name: 'Previously claimed by', value: ticket.claimed_by ? `<@${ticket.claimed_by}>` : 'Never claimed' },
+    ],
+  });
+
+  const row = ticket.claimed_by
+    ? new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`support_complete_${ticketId}`).setLabel('Mark as Complete').setEmoji('🏁').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`support_closeinvalid_${ticketId}`).setLabel('Close (Invalid)').setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
+      )
+    : new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`support_claim_${ticketId}`).setLabel('Claim Ticket').setEmoji('✅').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`support_cancel_${ticketId}`).setLabel('Cancel Ticket').setEmoji('✖️').setStyle(ButtonStyle.Danger)
+      );
+
+  await channel.send({ content: `<@${ticket.opener_id}>`, embeds: [statusEmbed], files: [transcriptFile], components: [row] });
+
+  reopenSupportTicket(ticketId, channel.id);
+
+  return { channel, alreadyOpen: false };
+}
+
+async function handleReopenButton(interaction) {
+  if (!hasRank(interaction.member, RANKS.STAFF)) {
+    return interaction.reply({ content: 'You need at least Staff rank to reopen tickets.', ephemeral: true });
+  }
+  const ticketId = parseInt(interaction.customId.replace('support_reopen_', ''), 10);
+  await interaction.deferReply({ ephemeral: true });
+  const result = await reopenTicketChannel(interaction.client, interaction.guild, ticketId);
+  if (result.error) return interaction.editReply({ content: result.error });
+  if (result.alreadyOpen) return interaction.editReply({ content: `That ticket is already open: ${result.channel}` });
+  await interaction.editReply({ content: `Ticket reopened: ${result.channel}` });
 }
 
 module.exports = {
@@ -361,4 +486,6 @@ module.exports = {
   handleFeedbackSubmit,
   handleCloseInvalid,
   handleInvalidModalSubmit,
+  handleReopenButton,
+  reopenTicketChannel,
 };

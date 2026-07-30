@@ -25,6 +25,7 @@ const migrations = [
   "ALTER TABLE users ADD COLUMN tickets_claimed_count INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN rating_sum INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN rating_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN last_spam_notice_at TEXT",
 ];
 for (const sql of migrations) {
   try {
@@ -307,6 +308,12 @@ function cancelSupportTicket(ticketId) {
   db.prepare("UPDATE support_tickets SET status = 'cancelled', closed_at = ? WHERE id = ?").run(new Date().toISOString(), ticketId);
 }
 
+function reopenSupportTicket(ticketId, channelId) {
+  const ticket = getSupportTicket(ticketId);
+  const newStatus = ticket && ticket.claimed_by ? 'claimed' : 'open';
+  db.prepare('UPDATE support_tickets SET channel_id = ?, status = ? WHERE id = ?').run(channelId, newStatus, ticketId);
+}
+
 function addTicketMessage(ticketId, authorId, authorTag, content) {
   db.prepare(
     `INSERT INTO ticket_messages (ticket_id, author_id, author_tag, content, timestamp) VALUES (?, ?, ?, ?, ?)`
@@ -324,6 +331,19 @@ function getStaffStats(staffId) {
     ratingCount: user.rating_count || 0,
     avgRating: user.rating_count > 0 ? (user.rating_sum / user.rating_count).toFixed(1) : null,
   };
+}
+
+function getSpamStage(userId) {
+  const user = getOrCreateUser(userId);
+  const now = Date.now();
+  const last = user.last_spam_notice_at ? new Date(user.last_spam_notice_at).getTime() : null;
+  if (!last || now - last > 24 * 60 * 60 * 1000) return 'notice';
+  return 'escalate';
+}
+
+function recordSpamNotice(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET last_spam_notice_at = ? WHERE user_id = ?').run(new Date().toISOString(), userId);
 }
 
 module.exports = {
@@ -360,7 +380,10 @@ module.exports = {
   completeSupportTicket,
   closeInvalidSupportTicket,
   cancelSupportTicket,
+  reopenSupportTicket,
   addTicketMessage,
   getTicketMessages,
   getStaffStats,
+  getSpamStage,
+  recordSpamNotice,
 };

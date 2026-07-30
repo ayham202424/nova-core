@@ -59,6 +59,7 @@ module.exports = {
       if (interaction.customId.startsWith('support_complete_')) return supportTicketFlow.handleComplete(interaction);
       if (interaction.customId.startsWith('support_closeinvalid_')) return supportTicketFlow.handleCloseInvalid(interaction);
       if (interaction.customId.startsWith('support_rate_')) return supportTicketFlow.handleRate(interaction);
+      if (interaction.customId.startsWith('support_reopen_')) return supportTicketFlow.handleReopenButton(interaction);
       return;
     }
 

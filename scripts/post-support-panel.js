@@ -27,7 +27,9 @@ client.once(Events.ClientReady, async () => {
     const embed = baseEmbed(client, {
       color: THEME.colors.primary,
       title: '🎫 Open a Support Ticket',
-      description: 'Choose a category below. You\'ll be asked a few quick questions, then a staff member will claim your ticket.',
+      description:
+        'Choose a category below. You\'ll be asked a few quick questions, then a staff member will claim your ticket.\n\n' +
+        '*"Staff LOA / Help" is only for staff members and only visible to you and Management.*',
     });
 
     const row = new ActionRowBuilder().addComponents(

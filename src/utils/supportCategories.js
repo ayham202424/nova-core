@@ -2,6 +2,7 @@ const SUPPORT_CATEGORIES = {
   hired: {
     label: 'Get Hired By Us',
     emoji: '💼',
+    prefix: 'application',
     fields: [
       { id: 'position', label: 'Which position are you applying for?', style: 'Short', maxLength: 100, required: true },
       { id: 'why', label: 'Why should we hire you?', style: 'Paragraph', maxLength: 500, required: true },
@@ -11,6 +12,7 @@ const SUPPORT_CATEGORIES = {
   bug: {
     label: 'Report a Bug',
     emoji: '🐛',
+    prefix: 'bug-report',
     fields: [
       { id: 'bug', label: 'What is the bug?', style: 'Paragraph', maxLength: 500, required: true },
       { id: 'steps', label: 'Steps to reproduce it', style: 'Paragraph', maxLength: 500, required: true },
@@ -20,6 +22,7 @@ const SUPPORT_CATEGORIES = {
   report: {
     label: 'Report a Person',
     emoji: '🚨',
+    prefix: 'user-report',
     fields: [
       { id: 'who', label: 'Who are you reporting? (username)', style: 'Short', maxLength: 100, required: true },
       { id: 'what', label: 'What did they do?', style: 'Paragraph', maxLength: 500, required: true },
@@ -29,9 +32,21 @@ const SUPPORT_CATEGORIES = {
   other: {
     label: 'Other / Partnership',
     emoji: '❓',
+    prefix: 'inquiry',
     fields: [
       { id: 'topic', label: 'What is this about?', style: 'Short', maxLength: 100, required: true },
       { id: 'details', label: 'Additional details', style: 'Paragraph', maxLength: 500, required: true },
+    ],
+  },
+  loa: {
+    label: 'Staff LOA / Help',
+    emoji: '🌴',
+    prefix: 'staff-loa',
+    staffOnly: true,
+    fields: [
+      { id: 'reason', label: 'Reason for LOA / help request', style: 'Paragraph', maxLength: 500, required: true },
+      { id: 'duration', label: 'Expected duration / dates (if LOA)', style: 'Short', maxLength: 100, required: false },
+      { id: 'notes', label: 'Additional notes', style: 'Paragraph', maxLength: 500, required: false },
     ],
   },
 };

@@ -1,8 +1,42 @@
 const config = require('../config');
-const { addWarn, getWarnStreak } = require('../database/db');
+const { addWarn, getWarnStreak, getWarnCount, getWarns } = require('../database/db');
 const { getWarnLevel } = require('./warnLevels');
 const { formatDuration } = require('./duration');
-const { baseEmbed } = require('./embeds');
+const { baseEmbed, THEME } = require('./embeds');
+
+const FLAG_MILESTONES = [3, 5, 8, 12];
+
+async function checkSuspiciousFlag(client, targetUser, totalWarns) {
+  if (!FLAG_MILESTONES.includes(totalWarns)) return;
+
+  try {
+    const recentWarns = getWarns(targetUser.id).slice(0, 5);
+    const logChannel = await client.channels.fetch(config.channels.cmdsLogs);
+    const pingRoleIds = [config.roles.staff, config.roles.mod, config.roles.manager].filter(Boolean);
+
+    const embed = baseEmbed(client, {
+      color: THEME.colors.danger,
+      authorName: targetUser.tag,
+      authorIcon: targetUser.displayAvatarURL(),
+      title: '🚩 Suspicious Activity — Repeated Violations',
+      description:
+        `${targetUser} (\`${targetUser.id}\`) has reached **${totalWarns} total warnings**. Please keep an eye on this user.\n\n` +
+        `**Account created:** <t:${Math.floor(targetUser.createdTimestamp / 1000)}:R>`,
+      fields: recentWarns.map((w) => ({
+        name: `${w.warn_type} — <t:${Math.floor(new Date(w.timestamp).getTime() / 1000)}:R>`,
+        value: w.reason.slice(0, 200),
+      })),
+    });
+
+    await logChannel.send({
+      content: pingRoleIds.map((id) => `<@&${id}>`).join(' '),
+      embeds: [embed],
+      allowedMentions: { roles: pingRoleIds },
+    });
+  } catch (err) {
+    console.error('Failed to send suspicious activity flag:', err);
+  }
+}
 
 async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorId, reason, proofUrl }) {
   const targetMember = await guild.members.fetch(targetUser.id).catch(() => null);
@@ -41,7 +75,7 @@ async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorI
         `**Issued by:** ${moderatorLabel}\n` +
         `**Timeout duration:** ${formatDuration(level.timeoutMinutes)}\n` +
         `**Warning streak:** ${streak} (resets after 24h with no new warnings)\n` +
-        (proofUrl ? `**Proof:** [View](${proofUrl})` : '**Proof:** None provided'),
+        (proofUrl ? `**Proof:** [View](${proofUrl})` : ''),
     });
     await targetUser.send({ embeds: [dmEmbed] });
   } catch (err) {
@@ -68,6 +102,9 @@ async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorI
   } catch (err) {
     console.error('Failed to log warn:', err);
   }
+
+  const totalWarns = getWarnCount(targetUser.id);
+  await checkSuspiciousFlag(client, targetUser, totalWarns);
 
   return { level, streak, timeoutApplied, dmSent };
 }
