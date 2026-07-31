@@ -9,6 +9,7 @@ const pingSettingsHandler = require('../handlers/pingSettingsHandler');
 const announcementFlow = require('../handlers/announcementFlow');
 const taskFlow = require('../handlers/taskFlow');
 const supportTicketFlow = require('../handlers/supportTicketFlow');
+const leaderboardManager = require('../handlers/leaderboardManager');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
@@ -60,6 +61,7 @@ module.exports = {
       if (interaction.customId.startsWith('support_closeinvalid_')) return supportTicketFlow.handleCloseInvalid(interaction);
       if (interaction.customId.startsWith('support_rate_')) return supportTicketFlow.handleRate(interaction);
       if (interaction.customId.startsWith('support_reopen_')) return supportTicketFlow.handleReopenButton(interaction);
+      if (interaction.customId.startsWith('leaderboard_tf_')) return leaderboardManager.handleTimeframeButton(interaction);
       return;
     }
 

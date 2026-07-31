@@ -26,6 +26,9 @@ module.exports = {
     supportPanel: process.env.SUPPORT_PANEL_CHANNEL_ID,
     supportTicketsCategory: process.env.SUPPORT_TICKETS_CATEGORY_ID,
     supportTicketLogs: process.env.SUPPORT_TICKET_LOGS_CHANNEL_ID,
+    leaderboard: process.env.LEVEL_LEADERBOARD_CHANNEL_ID,
+    levelUp: process.env.LEVEL_UP_CHANNEL_ID,
+    levelInfo: process.env.LEVEL_INFO_CHANNEL_ID,
   },
 
   roles: {
@@ -42,6 +45,7 @@ module.exports = {
     manager: process.env.MANAGER_ROLE_ID,
     coFounder: process.env.CO_FOUNDER_ROLE_ID,
     founder: process.env.FOUNDER_ROLE_ID,
+    vip: process.env.VIP_ROLE_ID,
   },
 
   pingRoles: {
@@ -49,6 +53,16 @@ module.exports = {
     giveaway: process.env.GIVEAWAY_PING_ROLE_ID,
     partner: process.env.PARTNER_PING_ROLE_ID,
     event: process.env.EVENT_PING_ROLE_ID,
+  },
+
+  levelRoles: {
+    level1: process.env.LEVEL_1_ROLE_ID,
+    level5: process.env.LEVEL_5_ROLE_ID,
+    level10: process.env.LEVEL_10_ROLE_ID,
+    level15: process.env.LEVEL_15_ROLE_ID,
+    level20: process.env.LEVEL_20_ROLE_ID,
+    level25: process.env.LEVEL_25_ROLE_ID,
+    level30: process.env.LEVEL_30_ROLE_ID,
   },
 
   verifyBannerUrl: process.env.VERIFY_BANNER_URL || null,

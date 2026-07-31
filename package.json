@@ -14,7 +14,8 @@
     "setup-trap-channel": "node scripts/setup-trap-channel.js",
     "post-trap-warning": "node scripts/post-trap-warning.js",
     "post-ping-settings": "node scripts/post-ping-settings.js",
-    "post-support-panel": "node scripts/post-support-panel.js"
+    "post-support-panel": "node scripts/post-support-panel.js",
+    "post-level-info": "node scripts/post-level-info.js"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const { MAX_LEVEL, xpForNextLevel } = require('../utils/xpCurve');
 
 const db = new Database(path.join(__dirname, '../../nova-core.db'));
 db.pragma('journal_mode = WAL');
@@ -110,6 +111,30 @@ db.exec(`
     author_tag TEXT NOT NULL,
     content TEXT,
     timestamp TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS message_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS xp_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    timestamp TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_state (
+    key TEXT PRIMARY KEY,
+    value TEXT
   );
 `);
 
@@ -346,6 +371,68 @@ function recordSpamNotice(userId) {
   db.prepare('UPDATE users SET last_spam_notice_at = ? WHERE user_id = ?').run(new Date().toISOString(), userId);
 }
 
+function incrementMessagesTotal(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET messages_total = messages_total + 1 WHERE user_id = ?').run(userId);
+}
+
+function recordMessageActivity(userId) {
+  db.prepare('INSERT INTO message_activity (user_id, timestamp) VALUES (?, ?)').run(userId, new Date().toISOString());
+}
+
+function recordXpActivity(userId, amount) {
+  if (!amount) return;
+  db.prepare('INSERT INTO xp_activity (user_id, amount, timestamp) VALUES (?, ?, ?)').run(userId, amount, new Date().toISOString());
+}
+
+function addXp(userId, baseAmount, isBooster) {
+  const user = getOrCreateUser(userId);
+  if (user.level >= MAX_LEVEL) return { leveledUp: false, oldLevel: user.level, newLevel: user.level, xpGained: 0 };
+
+  const amount = isBooster ? Math.round(baseAmount * 1.5) : baseAmount;
+  let newXp = user.xp + amount;
+  let newLevel = user.level;
+
+  while (newLevel < MAX_LEVEL && newXp >= xpForNextLevel(newLevel)) {
+    newXp -= xpForNextLevel(newLevel);
+    newLevel++;
+  }
+
+  db.prepare('UPDATE users SET xp = ?, level = ? WHERE user_id = ?').run(newXp, newLevel, userId);
+
+  return { leveledUp: newLevel > user.level, oldLevel: user.level, newLevel, xpGained: amount };
+}
+
+function getLevelLeaderboard(limit = 10) {
+  return db.prepare('SELECT user_id, level, xp FROM users ORDER BY level DESC, xp DESC LIMIT ?').all(limit);
+}
+
+function getMessageLeaderboard(cutoffMs, limit = 10) {
+  if (cutoffMs) {
+    const cutoffIso = new Date(cutoffMs).toISOString();
+    return db
+      .prepare('SELECT user_id, COUNT(*) as total FROM message_activity WHERE timestamp >= ? GROUP BY user_id ORDER BY total DESC LIMIT ?')
+      .all(cutoffIso, limit);
+  }
+  return db.prepare('SELECT user_id, COUNT(*) as total FROM message_activity GROUP BY user_id ORDER BY total DESC LIMIT ?').all(limit);
+}
+
+function getXpGainedLeaderboard(cutoffMs, limit = 10) {
+  const cutoffIso = new Date(cutoffMs).toISOString();
+  return db
+    .prepare('SELECT user_id, SUM(amount) as total FROM xp_activity WHERE timestamp >= ? GROUP BY user_id ORDER BY total DESC LIMIT ?')
+    .all(cutoffIso, limit);
+}
+
+function getBotState(key) {
+  const row = db.prepare('SELECT value FROM bot_state WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+function setBotState(key, value) {
+  db.prepare('INSERT INTO bot_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -386,4 +473,13 @@ module.exports = {
   getStaffStats,
   getSpamStage,
   recordSpamNotice,
+  incrementMessagesTotal,
+  recordMessageActivity,
+  recordXpActivity,
+  addXp,
+  getLevelLeaderboard,
+  getMessageLeaderboard,
+  getXpGainedLeaderboard,
+  getBotState,
+  setBotState,
 };
