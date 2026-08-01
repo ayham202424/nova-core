@@ -162,7 +162,7 @@ async function handleClaim(interaction) {
   });
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Primary)
   );
 
   await interaction.update({ embeds: [updatedEmbed], components: [row] });
@@ -241,7 +241,7 @@ async function handleRestore(interaction) {
   });
 
   const row = isClaimed
-    ? new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Secondary))
+    ? new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`market_close_${ticket.id}`).setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Primary))
     : new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`market_claim_${ticket.id}`).setLabel('Claim Ticket').setEmoji('✅').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`market_cancel_${ticket.id}`).setLabel('Cancel Ticket').setEmoji('✖️').setStyle(ButtonStyle.Danger)

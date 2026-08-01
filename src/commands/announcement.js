@@ -21,8 +21,9 @@ module.exports = {
           { name: 'Purple', value: 'purple' }
         )
     )
-    .addAttachmentOption((opt) => opt.setName('banner').setDescription('Banner image (shown large at the bottom)').setRequired(false))
-    .addAttachmentOption((opt) => opt.setName('file').setDescription('Additional file attachment').setRequired(false)),
+    .addAttachmentOption((opt) => opt.setName('banner').setDescription('Banner IMAGE (PNG/JPG/GIF/WebP only)').setRequired(false))
+    .addAttachmentOption((opt) => opt.setName('video').setDescription('Video file to attach (plays inline)').setRequired(false))
+    .addAttachmentOption((opt) => opt.setName('file').setDescription('Any other file attachment').setRequired(false)),
 
   async execute(interaction) {
     if (!hasRank(interaction.member, RANKS.MANAGER)) {

@@ -78,10 +78,26 @@ db.exec(`
     deadline TEXT,
     status TEXT DEFAULT 'open',
     claimed_by TEXT,
+    allow_multiple_claims INTEGER DEFAULT 0,
     created_by TEXT NOT NULL,
     created_at TEXT NOT NULL,
     completed_at TEXT,
     cancelled_at TEXT
+  );
+`);
+
+try {
+  db.exec("ALTER TABLE tasks ADD COLUMN allow_multiple_claims INTEGER DEFAULT 0");
+} catch (err) {
+  // column already exists — safe to ignore
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS task_claims (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    claimed_at TEXT NOT NULL
   );
 `);
 
@@ -240,11 +256,11 @@ function cancelTicket(channelId) {
   db.prepare("UPDATE tickets SET status = 'cancelled' WHERE channel_id = ?").run(channelId);
 }
 
-function createTask({ title, description, assignedRoleId, deadline, createdBy }) {
+function createTask({ title, description, assignedRoleId, deadline, createdBy, allowMultipleClaims }) {
   const info = db.prepare(
-    `INSERT INTO tasks (title, description, assigned_role_id, deadline, created_by, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(title, description, assignedRoleId || null, deadline || null, createdBy, new Date().toISOString());
+    `INSERT INTO tasks (title, description, assigned_role_id, deadline, created_by, created_at, allow_multiple_claims)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(title, description, assignedRoleId || null, deadline || null, createdBy, new Date().toISOString(), allowMultipleClaims ? 1 : 0);
   return info.lastInsertRowid;
 }
 
@@ -266,6 +282,21 @@ function completeTask(taskId) {
 
 function cancelTask(taskId) {
   db.prepare("UPDATE tasks SET status = 'cancelled', cancelled_at = ? WHERE id = ?").run(new Date().toISOString(), taskId);
+}
+
+function addTaskClaim(taskId, userId) {
+  const existing = db.prepare('SELECT * FROM task_claims WHERE task_id = ? AND user_id = ?').get(taskId, userId);
+  if (existing) return false;
+  db.prepare('INSERT INTO task_claims (task_id, user_id, claimed_at) VALUES (?, ?, ?)').run(taskId, userId, new Date().toISOString());
+  return true;
+}
+
+function getTaskClaims(taskId) {
+  return db.prepare('SELECT * FROM task_claims WHERE task_id = ? ORDER BY id ASC').all(taskId);
+}
+
+function hasUserClaimedTask(taskId, userId) {
+  return Boolean(db.prepare('SELECT 1 FROM task_claims WHERE task_id = ? AND user_id = ?').get(taskId, userId));
 }
 
 function incrementTicketsOpened(userId) {
@@ -457,6 +488,9 @@ module.exports = {
   claimTask,
   completeTask,
   cancelTask,
+  addTaskClaim,
+  getTaskClaims,
+  hasUserClaimedTask,
   incrementTicketsOpened,
   createSupportTicket,
   setSupportTicketChannel,

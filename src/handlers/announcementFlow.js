@@ -24,14 +24,14 @@ function buildComponents(data) {
   const channelRow = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
       .setCustomId('announce_channel_select')
-      .setPlaceholder(data.channelId ? `Channel selected` : 'Select a channel to post in')
+      .setPlaceholder(data.channelId ? 'Channel selected ✓' : 'Select a channel to post in')
       .setChannelTypes(ChannelType.GuildText)
   );
 
   const pingRow = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('announce_ping_select')
-      .setPlaceholder(data.pingKeys.length ? `${data.pingKeys.length} ping role(s) selected` : 'Select ping role(s) — optional')
+      .setPlaceholder(data.pingKeys.length ? `${data.pingKeys.length} ping role(s) selected ✓` : 'Select ping role(s) — optional')
       .setMinValues(0)
       .setMaxValues(PING_CATEGORIES.length)
       .addOptions(PING_CATEGORIES.map((c) => ({ label: c.label, value: c.key, emoji: c.emoji, default: data.pingKeys.includes(c.key) })))
@@ -43,7 +43,7 @@ function buildComponents(data) {
       .setLabel(data.pingEveryone ? '🚨 Ping Everyone: ON' : '🚨 Ping Everyone (Override)')
       .setStyle(data.pingEveryone ? ButtonStyle.Danger : ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('announce_send').setLabel('Send Announcement').setEmoji('✅').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('announce_cancel').setLabel('Cancel').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('announce_cancel').setLabel('Cancel').setEmoji('✖️').setStyle(ButtonStyle.Danger)
   );
 
   return [channelRow, pingRow, buttonRow];
@@ -56,6 +56,9 @@ function buildPreviewEmbed(client, data) {
     : data.pingKeys.length
     ? data.pingKeys.map((k) => PING_CATEGORIES.find((c) => c.key === k)?.label).join(', ')
     : '*none*';
+  const attachmentsSummary =
+    [data.bannerUrl ? 'Banner ✅' : null, data.videoUrl ? 'Video ✅' : null, data.fileUrl ? 'File ✅' : null].filter(Boolean).join(' · ') ||
+    'None';
 
   return baseEmbed(client, {
     color: data.color,
@@ -65,6 +68,7 @@ function buildPreviewEmbed(client, data) {
     fields: [
       { name: 'Target Channel', value: channelText, inline: true },
       { name: 'Ping', value: pingText, inline: true },
+      { name: 'Attachments', value: attachmentsSummary, inline: true },
     ],
   });
 }
@@ -75,13 +79,25 @@ async function startAnnouncementFlow(interaction) {
   const message = interaction.options.getString('message');
   const colorKey = interaction.options.getString('color');
   const banner = interaction.options.getAttachment('banner');
+  const video = interaction.options.getAttachment('video');
   const file = interaction.options.getAttachment('file');
+
+  if (banner && !banner.contentType?.startsWith('image/')) {
+    return interaction.reply({
+      content:
+        "The **banner** option only accepts images (PNG/JPG/GIF/WebP) because it renders inside the embed. " +
+        "For videos, use the **video** option instead — it attaches as a real, playable file.",
+      ephemeral: true,
+    });
+  }
 
   const data = {
     title,
     message,
     color: COLOR_MAP[colorKey] || COLOR_MAP.blue,
     bannerUrl: banner ? banner.url : null,
+    videoUrl: video ? video.url : null,
+    videoName: video ? video.name : null,
     fileUrl: file ? file.url : null,
     fileName: file ? file.name : null,
     channelId: null,
@@ -151,9 +167,10 @@ async function handleSend(interaction) {
   }
 
   const finalEmbed = buildPreviewEmbed(interaction.client, data);
-  finalEmbed.setFields(); // strip the internal "Target Channel / Ping" preview fields from the real post
+  finalEmbed.setFields();
 
   const files = [];
+  if (data.videoUrl) files.push(new AttachmentBuilder(data.videoUrl, { name: data.videoName || 'video.mp4' }));
   if (data.fileUrl) files.push(new AttachmentBuilder(data.fileUrl, { name: data.fileName || 'attachment' }));
 
   await targetChannel.send({ content: content || undefined, embeds: [finalEmbed], files, allowedMentions });

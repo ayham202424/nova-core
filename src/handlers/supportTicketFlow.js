@@ -198,7 +198,7 @@ async function handleClaim(interaction) {
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`support_complete_${ticketId}`).setLabel('Mark as Complete').setEmoji('🏁').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`support_closeinvalid_${ticketId}`).setLabel('Close (Invalid)').setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`support_closeinvalid_${ticketId}`).setLabel('Close (Invalid)').setEmoji('🗑️').setStyle(ButtonStyle.Danger)
   );
 
   await interaction.update({ embeds: [embed], components: [row] });
@@ -399,7 +399,7 @@ async function reopenTicketChannel(client, guild, ticketId) {
   const row = ticket.claimed_by
     ? new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`support_complete_${ticketId}`).setLabel('Mark as Complete').setEmoji('🏁').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`support_closeinvalid_${ticketId}`).setLabel('Close (Invalid)').setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder().setCustomId(`support_closeinvalid_${ticketId}`).setLabel('Close (Invalid)').setEmoji('🗑️').setStyle(ButtonStyle.Danger)
       )
     : new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`support_claim_${ticketId}`).setLabel('Claim Ticket').setEmoji('✅').setStyle(ButtonStyle.Success),

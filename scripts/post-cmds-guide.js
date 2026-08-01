@@ -63,8 +63,17 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Staff & Management Tools',
       fields: [
-        { name: '/announcement `title` `message` `color` `banner` `file`', value: 'Formatted announcement with channel & ping selection. **Requires:** Manager+' },
-        { name: '/task `title` `description` `assign_role` `deadline_minutes`', value: 'Claimable task for staff/devs. **Requires:** Manager+' },
+        { name: '/announcement `title` `message` `color` `banner` `video` `file`', value: 'Formatted announcement with channel & ping selection. Banner = image only, use `video` for playable video files. **Requires:** Manager+' },
+        { name: '/task `title` `description` `assign_role` `deadline_minutes` `allow_multiple_claims`', value: 'Claimable task for staff/devs — choose single-claimer or open-to-everyone-eligible. **Requires:** Manager+' },
+      ],
+    });
+
+    const levelingCommands = baseEmbed(client, {
+      color: THEME.colors.primary,
+      title: 'Leveling',
+      fields: [
+        { name: '/userinfo `user`', value: "View level, XP, messages sent, warns, and staff stats. Full details for yourself or Trial Staff+ checking others; limited public info otherwise." },
+        { name: 'Ping Settings', value: `Click "Manage My Ping Settings" in <#${config.channels.pingSettings}> — shows exactly what's active for you, privately.` },
       ],
     });
 
@@ -76,6 +85,7 @@ client.once(Events.ClientReady, async () => {
         '✦ **Language filter:** prohibited words are auto-removed and issue a warn on the same escalation ladder.\n' +
         '✦ **Suspicious activity flags:** users are automatically flagged here with full context at 3, 5, 8, and 12 total warnings.\n' +
         '✦ **Staff abuse detection:** 3+ kicks/bans by one staff member within an hour auto-locks them and pings leadership.\n' +
+        '✦ **Content gates:** links need Level 3+, GIFs Level 5+, files Level 10+ (staff exempt).\n' +
         '✦ Run `/help` anywhere for a quick summary.',
     });
 
@@ -84,6 +94,7 @@ client.once(Events.ClientReady, async () => {
     await channel.send({ embeds: [rightClickTools] });
     await channel.send({ embeds: [ticketCommands] });
     await channel.send({ embeds: [managementCommands] });
+    await channel.send({ embeds: [levelingCommands] });
     await channel.send({ embeds: [autoSystems] });
     console.log('Cmds guide updated successfully.');
   } catch (err) {

@@ -10,13 +10,11 @@ async function clearOldMessages(channel) {
     const ownMessages = messages.filter((m) => m.author.id === channel.client.user.id);
     if (ownMessages.size > 0) {
       await channel.bulkDelete(ownMessages, true).catch(async () => {
-        for (const [, msg] of ownMessages) {
-          await msg.delete().catch(() => {});
-        }
+        for (const [, msg] of ownMessages) await msg.delete().catch(() => {});
       });
     }
   } catch (err) {
-    console.error('Failed to clear old guide messages:', err);
+    console.error('Failed to clear old help messages:', err);
   }
 }
 
@@ -34,9 +32,10 @@ client.once(Events.ClientReady, async () => {
         { name: 'I have a verification problem', value: `Ask in <#${config.channels.verifyHelp}>.` },
         { name: 'How do warnings work?', value: 'Rule violations lead to warnings with automatic timeouts. Repeated violations escalate in severity.' },
         { name: 'How do I buy something?', value: 'Check the for-sale channels and click "I\'m Interested" on the listing you want.' },
-        { name: 'How do I control what I get pinged for?', value: `Head to <#${config.channels.pingSettings}> and toggle exactly what you want to be notified about.` },
+        { name: 'How does leveling work?', value: `Chat and react to earn XP — see <#${config.channels.levelInfo}> for the full breakdown, milestones, and perks.` },
+        { name: 'How do I control what I get pinged for?', value: `Head to <#${config.channels.pingSettings}> and click the button to open your personal settings.` },
         { name: 'I need staff help', value: 'Open a support ticket, or contact any online staff member directly.' },
-        { name: 'More features are coming', value: 'Leveling and ban appeals are actively being built — this channel will be updated as they launch.' },
+        { name: 'More features are coming', value: 'Ban appeals and giveaways are actively being built — this channel will be updated as they launch.' },
       ],
     });
 

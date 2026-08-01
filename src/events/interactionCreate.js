@@ -47,6 +47,7 @@ module.exports = {
       if (interaction.customId.startsWith('market_cancel_')) return ticketFlow.handleCancel(interaction);
       if (interaction.customId.startsWith('market_restore_')) return ticketFlow.handleRestore(interaction);
       if (interaction.customId.startsWith('market_close_')) return ticketFlow.handleClose(interaction);
+      if (interaction.customId === 'pingsettings_open') return pingSettingsHandler.handleOpenMenu(interaction);
       if (interaction.customId.startsWith('pingtoggle_')) return pingSettingsHandler.handleToggle(interaction);
       if (interaction.customId === 'announce_everyone_toggle') return announcementFlow.handleEveryoneToggle(interaction);
       if (interaction.customId === 'announce_send') return announcementFlow.handleSend(interaction);
