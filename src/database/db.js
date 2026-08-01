@@ -434,6 +434,13 @@ function addXp(userId, baseAmount, isBooster) {
   return { leveledUp: newLevel > user.level, oldLevel: user.level, newLevel, xpGained: amount };
 }
 
+function setUserLevel(userId, newLevel) {
+  const user = getOrCreateUser(userId);
+  const oldLevel = user.level;
+  db.prepare('UPDATE users SET level = ?, xp = 0 WHERE user_id = ?').run(newLevel, userId);
+  return oldLevel;
+}
+
 function getLevelLeaderboard(limit = 10) {
   return db.prepare('SELECT user_id, level, xp FROM users ORDER BY level DESC, xp DESC LIMIT ?').all(limit);
 }
@@ -511,6 +518,7 @@ module.exports = {
   recordMessageActivity,
   recordXpActivity,
   addXp,
+  setUserLevel,
   getLevelLeaderboard,
   getMessageLeaderboard,
   getXpGainedLeaderboard,
