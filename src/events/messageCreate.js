@@ -3,6 +3,7 @@ const config = require('../config');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const { getProtectedChannels } = require('../utils/protectedChannels');
 const dmMenuHandler = require('../handlers/dmMenuHandler');
+const appealFlow = require('../handlers/appealFlow');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -11,6 +12,8 @@ module.exports = {
     if (message.author.bot) return;
 
     if (!message.guild) {
+      const handledAsAttachment = await appealFlow.handleIncomingAttachment(message);
+      if (handledAsAttachment) return;
       return dmMenuHandler.handleIncomingDM(message);
     }
 

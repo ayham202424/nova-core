@@ -3,6 +3,8 @@ const config = require('../config');
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
 const { baseEmbed, THEME } = require('../utils/embeds');
 const { checkForAbuse } = require('../utils/abuseDetection');
+const { incrementKickCount } = require('../database/db');
+const { buildAppealRow } = require('../utils/moderationDM');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -33,6 +35,8 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
+    incrementKickCount(targetUser.id);
+
     let dmSent = true;
     try {
       const dmEmbed = baseEmbed(interaction.client, {
@@ -43,7 +47,7 @@ module.exports = {
           (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
           `\n\nYou are welcome to rejoin and follow the rules going forward.`,
       });
-      await targetUser.send({ embeds: [dmEmbed] });
+      await targetUser.send({ embeds: [dmEmbed], components: [buildAppealRow('kick')] });
     } catch (err) {
       dmSent = false;
     }

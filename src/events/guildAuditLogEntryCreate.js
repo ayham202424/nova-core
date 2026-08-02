@@ -2,6 +2,8 @@ const { Events, AuditLogEvent } = require('discord.js');
 const config = require('../config');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const { checkForAbuse } = require('../utils/abuseDetection');
+const { incrementBanCount, incrementKickCount } = require('../database/db');
+const { buildAppealRow } = require('../utils/moderationDM');
 
 module.exports = {
   name: Events.GuildAuditLogEntryCreate,
@@ -162,6 +164,9 @@ module.exports = {
 
         case AuditLogEvent.MemberKick: {
           if (entry.executorId === client.user.id) break;
+
+          incrementKickCount(entry.targetId);
+
           const logChannel = await client.channels.fetch(config.channels.cmdsLogs);
           await logChannel.send({
             embeds: [
@@ -174,6 +179,20 @@ module.exports = {
               }),
             ],
           });
+
+          if (entry.target) {
+            try {
+              const dmEmbed = baseEmbed(client, {
+                color: THEME.colors.danger,
+                title: '👢 You Have Been Kicked',
+                description: `You have been kicked from **Nova-Creations**.\n\n**Reason:** ${entry.reason || 'No reason provided'}`,
+              });
+              await entry.target.send({ embeds: [dmEmbed], components: [buildAppealRow('kick')] });
+            } catch (err) {
+              // DMs closed
+            }
+          }
+
           if (entry.executor) {
             const moderatorMember = await guild.members.fetch(entry.executor.id).catch(() => null);
             await checkForAbuse(client, guild, moderatorMember, 'kick');
@@ -183,6 +202,9 @@ module.exports = {
 
         case AuditLogEvent.MemberBanAdd: {
           if (entry.executorId === client.user.id) break;
+
+          incrementBanCount(entry.targetId);
+
           const logChannel = await client.channels.fetch(config.channels.cmdsLogs);
           await logChannel.send({
             embeds: [
@@ -195,6 +217,20 @@ module.exports = {
               }),
             ],
           });
+
+          if (entry.target) {
+            try {
+              const dmEmbed = baseEmbed(client, {
+                color: THEME.colors.danger,
+                title: '🔨 You Have Been Banned',
+                description: `You have been banned from **Nova-Creations**.\n\n**Reason:** ${entry.reason || 'No reason provided'}`,
+              });
+              await entry.target.send({ embeds: [dmEmbed], components: [buildAppealRow('ban')] });
+            } catch (err) {
+              // DMs closed
+            }
+          }
+
           if (entry.executor) {
             const moderatorMember = await guild.members.fetch(entry.executor.id).catch(() => null);
             await checkForAbuse(client, guild, moderatorMember, 'ban');
@@ -278,6 +314,8 @@ module.exports = {
             config.channels.staffGuide,
             config.channels.cmdsGuide,
             config.channels.help,
+            config.channels.supportTicketLogs,
+            config.channels.supportPanel,
           ];
           const channelId = entry.extra?.channel?.id || entry.extra?.channelId;
           if (!channelId || !protectedChannels.includes(channelId)) break;

@@ -29,6 +29,7 @@ module.exports = {
     leaderboard: process.env.LEVEL_LEADERBOARD_CHANNEL_ID,
     levelUp: process.env.LEVEL_UP_CHANNEL_ID,
     levelInfo: process.env.LEVEL_INFO_CHANNEL_ID,
+    banAppeals: process.env.BAN_APPEALS_CHANNEL_ID,
   },
 
   roles: {

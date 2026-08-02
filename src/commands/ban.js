@@ -3,6 +3,8 @@ const config = require('../config');
 const { hasRank, getRank, RANKS } = require('../utils/permissions');
 const { baseEmbed, THEME } = require('../utils/embeds');
 const { checkForAbuse } = require('../utils/abuseDetection');
+const { incrementBanCount } = require('../database/db');
+const { buildAppealRow } = require('../utils/moderationDM');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,6 +31,8 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
+    incrementBanCount(targetUser.id);
+
     let dmSent = true;
     try {
       const dmEmbed = baseEmbed(interaction.client, {
@@ -36,10 +40,9 @@ module.exports = {
         title: '🔨 You Have Been Banned',
         description:
           `You have been banned from **Nova-Creations**.\n\n**Reason:** ${reason}\n**Issued by:** ${staffMember.user.tag}\n` +
-          (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided') +
-          `\n\nA ban appeal system is coming soon.`,
+          (proof ? `**Proof:** [View](${proof.url})` : '**Proof:** None provided'),
       });
-      await targetUser.send({ embeds: [dmEmbed] });
+      await targetUser.send({ embeds: [dmEmbed], components: [buildAppealRow('ban')] });
     } catch (err) {
       dmSent = false;
     }

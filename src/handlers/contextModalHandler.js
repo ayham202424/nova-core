@@ -4,6 +4,8 @@ const { issueWarn } = require('../utils/autoWarn');
 const { baseEmbed, THEME } = require('../utils/embeds');
 const { checkForAbuse } = require('../utils/abuseDetection');
 const { formatDuration } = require('../utils/duration');
+const { incrementBanCount, incrementKickCount } = require('../database/db');
+const { buildAppealRow } = require('../utils/moderationDM');
 
 async function getProof(client, channelId, messageId) {
   try {
@@ -56,6 +58,8 @@ module.exports = {
       const targetMember = await interaction.guild.members.fetch(targetUserId).catch(() => null);
       if (!targetMember) return interaction.editReply({ content: 'That user is not in the server.' });
 
+      incrementKickCount(targetUserId);
+
       let dmSent = true;
       try {
         const dmEmbed = baseEmbed(interaction.client, {
@@ -63,7 +67,7 @@ module.exports = {
           title: '👢 You Have Been Kicked',
           description: `You have been kicked from **Nova-Creations**.\n\n**Reason:** ${reason}\n**Issued by:** ${staffMember.user.tag}\n${proofNote}`,
         });
-        await targetUser.send({ embeds: [dmEmbed] });
+        await targetUser.send({ embeds: [dmEmbed], components: [buildAppealRow('kick')] });
       } catch (err) {
         dmSent = false;
       }
@@ -101,6 +105,8 @@ module.exports = {
     if (prefix === 'ctxban') {
       if (!hasRank(staffMember, RANKS.HEAD_MOD)) return interaction.editReply({ content: 'You need at least Head Mod rank to do this.' });
 
+      incrementBanCount(targetUserId);
+
       let dmSent = true;
       try {
         const dmEmbed = baseEmbed(interaction.client, {
@@ -108,7 +114,7 @@ module.exports = {
           title: '🔨 You Have Been Banned',
           description: `You have been banned from **Nova-Creations**.\n\n**Reason:** ${reason}\n**Issued by:** ${staffMember.user.tag}\n${proofNote}`,
         });
-        await targetUser.send({ embeds: [dmEmbed] });
+        await targetUser.send({ embeds: [dmEmbed], components: [buildAppealRow('ban')] });
       } catch (err) {
         dmSent = false;
       }

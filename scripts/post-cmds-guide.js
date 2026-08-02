@@ -36,6 +36,7 @@ client.once(Events.ClientReady, async () => {
         { name: '/ban `user` `reason` `proof`', value: 'Ban a member. **Requires:** Head Mod+' },
         { name: '/unban `userid` `reason`', value: 'Unban by User ID. **Requires:** Head Mod+' },
         { name: '/clearwarns `user` `reason`', value: 'Wipe entire warning history. **Requires:** Community Manager+' },
+        { name: '/setlevel `user` `level`', value: "Manually set a member's level with automatic role sync. **Requires:** Manager+" },
       ],
     });
 
@@ -64,7 +65,7 @@ client.once(Events.ClientReady, async () => {
       title: 'Staff & Management Tools',
       fields: [
         { name: '/announcement `title` `message` `color` `banner` `video` `file`', value: 'Formatted announcement with channel & ping selection. Banner = image only, use `video` for playable video files. **Requires:** Manager+' },
-        { name: '/task `title` `description` `assign_role` `deadline_minutes` `allow_multiple_claims`', value: 'Claimable task for staff/devs — choose single-claimer or open-to-everyone-eligible. **Requires:** Manager+' },
+        { name: '/task `title` `description` `assign_role` `deadline_minutes` `allow_multiple_claims`', value: 'Claimable task for staff/devs — single-claimer or open-to-everyone-eligible. **Requires:** Manager+' },
       ],
     });
 
@@ -72,8 +73,18 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Leveling',
       fields: [
-        { name: '/userinfo `user`', value: "View level, XP, messages sent, warns, and staff stats. Full details for yourself or Trial Staff+ checking others; limited public info otherwise." },
+        { name: '/userinfo `user`', value: "View level, XP, messages sent, warns, and staff stats. Full details for yourself or Trial Staff+ checking others." },
         { name: 'Ping Settings', value: `Click "Manage My Ping Settings" in <#${config.channels.pingSettings}> — shows exactly what's active for you, privately.` },
+      ],
+    });
+
+    const appealSystem = baseEmbed(client, {
+      color: THEME.colors.primary,
+      title: 'Ban / Kick Appeals',
+      description: `Appeals arrive automatically in <#${config.channels.banAppeals}> whenever someone banned or kicked clicks "Submit an Appeal" in their DM. Each entry shows their full history and an automatic threat level (🟢 Clean → 🔴 High Risk).`,
+      fields: [
+        { name: 'Accept & Unban / Accept & Send Invite', value: 'Unbans (for bans) or sends a one-time rejoin invite (for kicks), and notifies the user. **Requires:** Head Mod+' },
+        { name: 'Reject', value: 'Asks for a reason, then notifies the user why. **Requires:** Head Mod+' },
       ],
     });
 
@@ -95,6 +106,7 @@ client.once(Events.ClientReady, async () => {
     await channel.send({ embeds: [ticketCommands] });
     await channel.send({ embeds: [managementCommands] });
     await channel.send({ embeds: [levelingCommands] });
+    await channel.send({ embeds: [appealSystem] });
     await channel.send({ embeds: [autoSystems] });
     console.log('Cmds guide updated successfully.');
   } catch (err) {

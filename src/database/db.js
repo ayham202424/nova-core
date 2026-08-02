@@ -27,6 +27,8 @@ const migrations = [
   "ALTER TABLE users ADD COLUMN rating_sum INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN rating_count INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN last_spam_notice_at TEXT",
+  "ALTER TABLE users ADD COLUMN bans_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN kicks_count INTEGER DEFAULT 0",
 ];
 for (const sql of migrations) {
   try {
@@ -151,6 +153,32 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS bot_state (
     key TEXT PRIMARY KEY,
     value TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS appeals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    user_tag TEXT NOT NULL,
+    type TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    reviewed_by TEXT,
+    reviewed_at TEXT,
+    review_note TEXT,
+    channel_id TEXT,
+    message_id TEXT,
+    created_at TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS appeal_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    appeal_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    filename TEXT
   );
 `);
 
@@ -471,6 +499,53 @@ function setBotState(key, value) {
   db.prepare('INSERT INTO bot_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
 }
 
+function incrementBanCount(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET bans_count = bans_count + 1 WHERE user_id = ?').run(userId);
+}
+
+function incrementKickCount(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET kicks_count = kicks_count + 1 WHERE user_id = ?').run(userId);
+}
+
+function createAppeal({ userId, userTag, type, reason }) {
+  const info = db.prepare(
+    `INSERT INTO appeals (user_id, user_tag, type, reason, created_at) VALUES (?, ?, ?, ?, ?)`
+  ).run(userId, userTag, type, reason, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setAppealMessage(appealId, channelId, messageId) {
+  db.prepare('UPDATE appeals SET channel_id = ?, message_id = ? WHERE id = ?').run(channelId, messageId, appealId);
+}
+
+function getAppeal(appealId) {
+  return db.prepare('SELECT * FROM appeals WHERE id = ?').get(appealId);
+}
+
+function getOpenAppealByUser(userId) {
+  return db.prepare("SELECT * FROM appeals WHERE user_id = ? AND status = 'pending'").get(userId);
+}
+
+function addAppealAttachment(appealId, url, filename) {
+  db.prepare('INSERT INTO appeal_attachments (appeal_id, url, filename) VALUES (?, ?, ?)').run(appealId, url, filename || null);
+}
+
+function getAppealAttachments(appealId) {
+  return db.prepare('SELECT * FROM appeal_attachments WHERE appeal_id = ?').all(appealId);
+}
+
+function updateAppealStatus(appealId, status, reviewedBy, reviewNote) {
+  db.prepare('UPDATE appeals SET status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?').run(
+    status,
+    reviewedBy,
+    new Date().toISOString(),
+    reviewNote || null,
+    appealId
+  );
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -524,4 +599,13 @@ module.exports = {
   getXpGainedLeaderboard,
   getBotState,
   setBotState,
+  incrementBanCount,
+  incrementKickCount,
+  createAppeal,
+  setAppealMessage,
+  getAppeal,
+  getOpenAppealByUser,
+  addAppealAttachment,
+  getAppealAttachments,
+  updateAppealStatus,
 };

@@ -10,6 +10,7 @@ const announcementFlow = require('../handlers/announcementFlow');
 const taskFlow = require('../handlers/taskFlow');
 const supportTicketFlow = require('../handlers/supportTicketFlow');
 const leaderboardManager = require('../handlers/leaderboardManager');
+const appealFlow = require('../handlers/appealFlow');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
@@ -63,6 +64,9 @@ module.exports = {
       if (interaction.customId.startsWith('support_rate_')) return supportTicketFlow.handleRate(interaction);
       if (interaction.customId.startsWith('support_reopen_')) return supportTicketFlow.handleReopenButton(interaction);
       if (interaction.customId.startsWith('leaderboard_tf_')) return leaderboardManager.handleTimeframeButton(interaction);
+      if (interaction.customId.startsWith('appeal_start_')) return appealFlow.handleAppealStart(interaction);
+      if (interaction.customId.startsWith('appeal_accept_')) return appealFlow.handleAccept(interaction);
+      if (interaction.customId.startsWith('appeal_reject_')) return appealFlow.handleReject(interaction);
       return;
     }
 
@@ -93,6 +97,8 @@ module.exports = {
       if (interaction.customId.startsWith('support_modal_')) return supportTicketFlow.handleModalSubmit(interaction);
       if (interaction.customId.startsWith('support_feedback_modal_')) return supportTicketFlow.handleFeedbackSubmit(interaction);
       if (interaction.customId.startsWith('support_invalid_modal_')) return supportTicketFlow.handleInvalidModalSubmit(interaction);
+      if (interaction.customId.startsWith('appeal_modal_')) return appealFlow.handleAppealModalSubmit(interaction);
+      if (interaction.customId.startsWith('appeal_reject_modal_')) return appealFlow.handleRejectModalSubmit(interaction);
     }
   },
 };
