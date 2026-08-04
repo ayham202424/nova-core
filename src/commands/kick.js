@@ -67,7 +67,9 @@ module.exports = {
         authorName: targetUser.tag,
         authorIcon: targetUser.displayAvatarURL(),
         title: kicked ? '👢 Member Kicked' : '⚠️ Kick Failed',
-        description: `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
+        description:
+          `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}` +
+          (!dmSent ? `\n\n⚠️ Could not reach them — if they appeal through another means, use \`/submitappeal\`.` : ''),
         fields: [{ name: 'Reason', value: reason }],
         image: proof ? proof.url : null,
       });

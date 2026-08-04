@@ -173,7 +173,9 @@ async function handleAccept(interaction) {
   const embed = baseEmbed(interaction.client, {
     color: THEME.colors.success,
     title: `✅ Appeal #${appealId} — Accepted`,
-    description: `**Reviewed by:** ${interaction.user}\n**User notified:** ${dmSent ? 'Yes ✅' : 'No ❌'}${extra}`,
+    description:
+      `**Reviewed by:** ${interaction.user}\n**User notified:** ${dmSent ? 'Yes ✅' : 'No ❌'}${extra}` +
+      (!dmSent && appeal.type === 'kick' ? `\n\n⚠️ Could not DM them the invite — share it manually if you have another way to reach them.` : ''),
   });
 
   await interaction.update({ embeds: [embed], components: [] });
@@ -225,4 +227,12 @@ async function handleRejectModalSubmit(interaction) {
   await interaction.update({ embeds: [embed], components: [] });
 }
 
-module.exports = { handleAppealStart, handleAppealModalSubmit, handleIncomingAttachment, handleAccept, handleReject, handleRejectModalSubmit };
+module.exports = {
+  handleAppealStart,
+  handleAppealModalSubmit,
+  handleIncomingAttachment,
+  handleAccept,
+  handleReject,
+  handleRejectModalSubmit,
+  postAppealToChannel,
+};
