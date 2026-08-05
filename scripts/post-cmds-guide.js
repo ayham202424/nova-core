@@ -55,8 +55,9 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Ticket Management',
       fields: [
-        { name: '/reopenticket `ticketid`', value: 'Reopens a closed support ticket with full history attached. Button also on every support-ticket-logs entry. **Requires:** Staff+' },
+        { name: '/reopenticket `ticketid`', value: 'Reopens a closed support ticket with full history attached. **Requires:** Staff+' },
         { name: '/restoreticket `ticketid`', value: "Quick read-only transcript view. **Requires:** Staff+" },
+        { name: '/submitappeal `userid` `type` `reason`', value: "Manually log an appeal if a user couldn't reach the bot via DM. **Requires:** Head Mod+" },
       ],
     });
 
@@ -64,8 +65,10 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Staff & Management Tools',
       fields: [
-        { name: '/announcement `title` `message` `color` `banner` `video` `file`', value: 'Formatted announcement with channel & ping selection. Banner = image only, use `video` for playable video files. **Requires:** Manager+' },
-        { name: '/task `title` `description` `assign_role` `deadline_minutes` `allow_multiple_claims`', value: 'Claimable task for staff/devs — single-claimer or open-to-everyone-eligible. **Requires:** Manager+' },
+        { name: '/announcement `title` `message` `color` `banner` `video` `file`', value: 'Formatted announcement with channel & ping selection. **Requires:** Manager+' },
+        { name: '/task `title` `description` `assign_role` `deadline_minutes` `allow_multiple_claims`', value: 'Claimable task for staff/devs. **Requires:** Manager+' },
+        { name: '/giveaway `title` `prize` `duration_minutes` `winner_count` `requirement` `requirement_value` `banner`', value: 'Creates a giveaway with optional level/invite requirements. **Requires:** Manager+' },
+        { name: '/endgiveaway `giveawayid`', value: 'Ends a giveaway early and picks winners immediately. **Requires:** Manager+' },
       ],
     });
 
@@ -73,7 +76,7 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.primary,
       title: 'Leveling',
       fields: [
-        { name: '/userinfo `user`', value: "View level, XP, messages sent, warns, and staff stats. Full details for yourself or Trial Staff+ checking others." },
+        { name: '/userinfo `user`', value: "View level, XP, messages sent, warns, and staff stats." },
         { name: 'Ping Settings', value: `Click "Manage My Ping Settings" in <#${config.channels.pingSettings}> — shows exactly what's active for you, privately.` },
       ],
     });
@@ -81,10 +84,10 @@ client.once(Events.ClientReady, async () => {
     const appealSystem = baseEmbed(client, {
       color: THEME.colors.primary,
       title: 'Ban / Kick Appeals',
-      description: `Appeals arrive automatically in <#${config.channels.banAppeals}> whenever someone banned or kicked clicks "Submit an Appeal" in their DM. Each entry shows their full history and an automatic threat level (🟢 Clean → 🔴 High Risk).`,
+      description: `Appeals arrive automatically in <#${config.channels.banAppeals}> whenever someone banned or kicked clicks "Submit an Appeal" in their DM. Each entry shows their full history and an automatic threat level.`,
       fields: [
-        { name: 'Accept & Unban / Accept & Send Invite', value: 'Unbans (for bans) or sends a one-time rejoin invite (for kicks), and notifies the user. **Requires:** Head Mod+' },
-        { name: 'Reject', value: 'Asks for a reason, then notifies the user why. **Requires:** Head Mod+' },
+        { name: 'Accept & Unban / Accept & Send Invite', value: 'Unbans or sends a rejoin invite, and notifies the user. **Requires:** Head Mod+' },
+        { name: 'Reject', value: 'Asks for a reason, then notifies the user. **Requires:** Head Mod+' },
       ],
     });
 
@@ -92,11 +95,12 @@ client.once(Events.ClientReady, async () => {
       color: THEME.colors.warning,
       title: 'Automated Security Systems',
       description:
-        '✦ **Spam protection:** 4+ messages in 5s → first offense in 24h gets a 30-second cooldown with a DM warning (no formal warn). Repeat within 24h → real escalating warns.\n' +
-        '✦ **Language filter:** prohibited words are auto-removed and issue a warn on the same escalation ladder.\n' +
-        '✦ **Suspicious activity flags:** users are automatically flagged here with full context at 3, 5, 8, and 12 total warnings.\n' +
-        '✦ **Staff abuse detection:** 3+ kicks/bans by one staff member within an hour auto-locks them and pings leadership.\n' +
+        '✦ **Spam protection:** 4+ messages in 5s → first offense in 24h gets a 30-second cooldown with a DM warning. Repeat within 24h → real escalating warns.\n' +
+        '✦ **Language filter:** prohibited words are auto-removed and issue a warn.\n' +
+        '✦ **Suspicious activity flags:** users are flagged here at 3, 5, 8, and 12 total warnings.\n' +
+        '✦ **Staff abuse detection:** 3+ kicks/bans by one staff member within an hour auto-locks them.\n' +
         '✦ **Content gates:** links need Level 3+, GIFs Level 5+, files Level 10+ (staff exempt).\n' +
+        '✦ **Giveaway safety:** High Risk-flagged users cannot enter giveaways.\n' +
         '✦ Run `/help` anywhere for a quick summary.',
     });
 

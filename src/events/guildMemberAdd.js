@@ -1,7 +1,8 @@
 const { Events } = require('discord.js');
 const config = require('../config');
-const { getOrCreateUser } = require('../database/db');
+const { getOrCreateUser, incrementInvites } = require('../database/db');
 const { THEME, baseEmbed } = require('../utils/embeds');
+const { resolveInviterOnJoin } = require('../utils/inviteTracker');
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -16,10 +17,19 @@ module.exports = {
       console.error(`Failed to assign Unverified role to ${member.user.tag}:`, err);
     }
 
+    let inviterId = null;
+    try {
+      inviterId = await resolveInviterOnJoin(member.guild);
+      if (inviterId && inviterId !== member.id) {
+        incrementInvites(inviterId);
+      }
+    } catch (err) {
+      console.error('Failed to resolve inviter:', err);
+    }
+
     let dmSent = true;
     try {
       const verifyChannelLink = `https://discord.com/channels/${member.guild.id}/${config.channels.verify}`;
-
       const welcomeEmbed = baseEmbed(member.client, {
         color: THEME.colors.primary,
         authorName: 'Nova-Creations',
@@ -28,15 +38,11 @@ module.exports = {
         description:
           `Hey ${member.user.username}, thanks for joining!\n\n` +
           'Before you can see and use the rest of the server, you need to **verify yourself**.\n\n' +
-          `👉 Head over to **[the verification channel](${verifyChannelLink})** and click **Accept & Enter** ` +
-          'after reading the rules.\n\n' +
-          'This only takes a few seconds and unlocks the full server.',
+          `👉 Head over to **[the verification channel](${verifyChannelLink})** and click **Accept & Enter** after reading the rules.`,
       });
-
       await member.send({ embeds: [welcomeEmbed] });
     } catch (err) {
       dmSent = false;
-      console.log(`Could not DM ${member.user.tag} on join — their DMs are likely closed.`);
     }
 
     try {
@@ -50,11 +56,9 @@ module.exports = {
         title: '📥 Member Joined',
         description: `${member} joined the server.`,
         fields: [
-          {
-            name: 'Account Created',
-            value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:F> (${accountAgeDays} days ago)`,
-          },
+          { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:F> (${accountAgeDays} days ago)` },
           { name: 'User ID', value: `\`${member.id}\`` },
+          { name: 'Invited By', value: inviterId ? `<@${inviterId}>` : 'Unknown (vanity URL / expired invite)' },
           { name: 'Welcome DM Sent', value: dmSent ? 'Yes ✅' : 'No — DMs closed ❌' },
         ],
         thumbnail: member.user.displayAvatarURL({ size: 256 }),

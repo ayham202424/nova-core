@@ -11,6 +11,7 @@ const taskFlow = require('../handlers/taskFlow');
 const supportTicketFlow = require('../handlers/supportTicketFlow');
 const leaderboardManager = require('../handlers/leaderboardManager');
 const appealFlow = require('../handlers/appealFlow');
+const giveawayFlow = require('../handlers/giveawayFlow');
 const { baseEmbed, THEME } = require('../utils/embeds');
 
 module.exports = {
@@ -67,12 +68,14 @@ module.exports = {
       if (interaction.customId.startsWith('appeal_start_')) return appealFlow.handleAppealStart(interaction);
       if (interaction.customId.startsWith('appeal_accept_')) return appealFlow.handleAccept(interaction);
       if (interaction.customId.startsWith('appeal_reject_')) return appealFlow.handleReject(interaction);
+      if (interaction.customId.startsWith('giveaway_enter_')) return giveawayFlow.handleEnterClick(interaction);
       return;
     }
 
     if (interaction.isChannelSelectMenu()) {
       if (interaction.customId === 'announce_channel_select') return announcementFlow.handleChannelSelect(interaction);
       if (interaction.customId === 'task_channel_select') return taskFlow.handleChannelSelect(interaction);
+      if (interaction.customId === 'giveaway_channel_select') return giveawayFlow.handleChannelSelect(interaction);
       return;
     }
 

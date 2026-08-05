@@ -1,11 +1,20 @@
 const { Events } = require('discord.js');
+const config = require('../config');
 const { startLeaderboardScheduler } = require('../handlers/leaderboardManager');
+const { initInviteCache } = require('../utils/inviteTracker');
+const { startGiveawayScheduler } = require('../utils/giveawayScheduler');
 
 module.exports = {
   name: Events.ClientReady,
   once: true,
-  execute(client) {
+  async execute(client) {
     console.log(`Nova Core is online as ${client.user.tag}`);
     startLeaderboardScheduler(client);
+    startGiveawayScheduler(client);
+
+    const guild = client.guilds.cache.get(config.guildId);
+    if (guild) {
+      await initInviteCache(guild);
+    }
   },
 };

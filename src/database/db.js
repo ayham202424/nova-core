@@ -29,6 +29,7 @@ const migrations = [
   "ALTER TABLE users ADD COLUMN last_spam_notice_at TEXT",
   "ALTER TABLE users ADD COLUMN bans_count INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN kicks_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN invites_count INTEGER DEFAULT 0",
 ];
 for (const sql of migrations) {
   try {
@@ -179,6 +180,32 @@ db.exec(`
     appeal_id INTEGER NOT NULL,
     url TEXT NOT NULL,
     filename TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS giveaways (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id TEXT,
+    message_id TEXT,
+    title TEXT NOT NULL,
+    prize TEXT NOT NULL,
+    requirement_type TEXT DEFAULT 'none',
+    requirement_value INTEGER,
+    winner_count INTEGER DEFAULT 1,
+    end_time TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS giveaway_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    giveaway_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    entered_at TEXT NOT NULL
   );
 `);
 
@@ -546,6 +573,54 @@ function updateAppealStatus(appealId, status, reviewedBy, reviewNote) {
   );
 }
 
+function incrementInvites(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET invites_count = invites_count + 1 WHERE user_id = ?').run(userId);
+}
+
+function createGiveaway({ title, prize, requirementType, requirementValue, winnerCount, endTime, createdBy }) {
+  const info = db.prepare(
+    `INSERT INTO giveaways (title, prize, requirement_type, requirement_value, winner_count, end_time, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(title, prize, requirementType, requirementValue || null, winnerCount, endTime, createdBy, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setGiveawayMessage(giveawayId, channelId, messageId) {
+  db.prepare('UPDATE giveaways SET channel_id = ?, message_id = ? WHERE id = ?').run(channelId, messageId, giveawayId);
+}
+
+function getGiveaway(giveawayId) {
+  return db.prepare('SELECT * FROM giveaways WHERE id = ?').get(giveawayId);
+}
+
+function getActiveGiveaways() {
+  return db.prepare("SELECT * FROM giveaways WHERE status = 'active'").all();
+}
+
+function addGiveawayEntry(giveawayId, userId) {
+  const existing = db.prepare('SELECT * FROM giveaway_entries WHERE giveaway_id = ? AND user_id = ?').get(giveawayId, userId);
+  if (existing) return false;
+  db.prepare('INSERT INTO giveaway_entries (giveaway_id, user_id, entered_at) VALUES (?, ?, ?)').run(giveawayId, userId, new Date().toISOString());
+  return true;
+}
+
+function getGiveawayEntries(giveawayId) {
+  return db.prepare('SELECT * FROM giveaway_entries WHERE giveaway_id = ?').all(giveawayId);
+}
+
+function hasEnteredGiveaway(giveawayId, userId) {
+  return Boolean(db.prepare('SELECT 1 FROM giveaway_entries WHERE giveaway_id = ? AND user_id = ?').get(giveawayId, userId));
+}
+
+function endGiveaway(giveawayId) {
+  db.prepare("UPDATE giveaways SET status = 'ended' WHERE id = ?").run(giveawayId);
+}
+
+function cancelGiveaway(giveawayId) {
+  db.prepare("UPDATE giveaways SET status = 'cancelled' WHERE id = ?").run(giveawayId);
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -608,4 +683,14 @@ module.exports = {
   addAppealAttachment,
   getAppealAttachments,
   updateAppealStatus,
+  incrementInvites,
+  createGiveaway,
+  setGiveawayMessage,
+  getGiveaway,
+  getActiveGiveaways,
+  addGiveawayEntry,
+  getGiveawayEntries,
+  hasEnteredGiveaway,
+  endGiveaway,
+  cancelGiveaway,
 };
