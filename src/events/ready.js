@@ -3,6 +3,7 @@ const config = require('../config');
 const { startLeaderboardScheduler } = require('../handlers/leaderboardManager');
 const { initInviteCache } = require('../utils/inviteTracker');
 const { startGiveawayScheduler } = require('../utils/giveawayScheduler');
+const { updateMemberCountChannel } = require('../utils/memberCountManager');
 
 module.exports = {
   name: Events.ClientReady,
@@ -16,5 +17,10 @@ module.exports = {
     if (guild) {
       await initInviteCache(guild);
     }
+
+    updateMemberCountChannel(client).catch((err) => console.error('Initial member count update failed:', err));
+    setInterval(() => {
+      updateMemberCountChannel(client).catch((err) => console.error('Member count update failed:', err));
+    }, 3 * 60 * 1000);
   },
 };

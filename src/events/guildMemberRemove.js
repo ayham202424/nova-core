@@ -1,11 +1,24 @@
-const { Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, AuditLogEvent } = require('discord.js');
 const config = require('../config');
 const { THEME, baseEmbed } = require('../utils/embeds');
+const { findExecutor } = require('../utils/auditLog');
+const { updateMemberCountChannel } = require('../utils/memberCountManager');
 
 module.exports = {
   name: Events.GuildMemberRemove,
   once: false,
   async execute(member) {
+    updateMemberCountChannel(member.client).catch((err) => console.error('Member count update failed:', err));
+
+    let kickedBy = null;
+    try {
+      if (findExecutor) {
+        kickedBy = await findExecutor(member.guild, AuditLogEvent.MemberKick, member.id).catch(() => null);
+      }
+    } catch (err) {
+      kickedBy = null;
+    }
+
     try {
       const userLogsChannel = await member.client.channels.fetch(config.channels.userLogs);
       const roles = member.roles?.cache

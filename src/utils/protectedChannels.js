@@ -1,4 +1,5 @@
 const config = require('../config');
+const { getBotState } = require('../database/db');
 
 function getProtectedChannels() {
   return [
@@ -11,6 +12,7 @@ function getProtectedChannels() {
     config.channels.help,
     config.channels.supportTicketLogs,
     config.channels.supportPanel,
+    getBotState('member_count_channel_id'),
   ].filter(Boolean);
 }
 

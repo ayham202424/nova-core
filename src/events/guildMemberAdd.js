@@ -3,6 +3,7 @@ const config = require('../config');
 const { getOrCreateUser, incrementInvites } = require('../database/db');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const { resolveInviterOnJoin } = require('../utils/inviteTracker');
+const { updateMemberCountChannel } = require('../utils/memberCountManager');
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -16,6 +17,8 @@ module.exports = {
     } catch (err) {
       console.error(`Failed to assign Unverified role to ${member.user.tag}:`, err);
     }
+
+    updateMemberCountChannel(member.client).catch((err) => console.error('Member count update failed:', err));
 
     let inviterId = null;
     try {

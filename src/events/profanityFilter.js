@@ -10,6 +10,7 @@ module.exports = {
   async execute(message) {
     if (message.author.bot || !message.guild) return;
     if (getProtectedChannels().includes(message.channelId)) return;
+    if (config.freeZoneChannelIds.includes(message.channelId)) return;
 
     const match = checkProfanity(message.content);
     if (!match) return;

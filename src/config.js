@@ -66,5 +66,7 @@ module.exports = {
     level30: process.env.LEVEL_30_ROLE_ID,
   },
 
+  freeZoneChannelIds: (process.env.FREE_ZONE_CHANNEL_IDS || '').split(',').map((s) => s.trim()).filter(Boolean),
+
   verifyBannerUrl: process.env.VERIFY_BANNER_URL || null,
 };
