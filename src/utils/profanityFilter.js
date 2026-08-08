@@ -1,5 +1,5 @@
 // Add more words directly here any time — normalization below covers all bypass variants automatically
-// (leetspeak, accented/special characters, repeated letters, inserted punctuation, single dropped letters).
+// (leetspeak, accented/special characters, homoglyphs, repeated letters, inserted punctuation, single dropped letters).
 const BLOCKED_WORDS = [
   'arse', 'arsehead', 'arsehole', 'ass', 'asshole',
   'bastard', 'bitch', 'bollocks', 'brotherfucker', 'bullshit',
@@ -15,13 +15,23 @@ const BLOCKED_WORDS = [
   'shit', 'shite', 'sisterfuck', 'sisterfucker', 'slut', 'spastic',
   'tranny', 'twat',
   'wanker',
-  // Uncomment the line below if you also want "gay" blocked when used as an insult —
-  // left out by default since it's an identity term, not inherently profanity.
+  // Uncomment below to also block "gay" when used as an insult — left out by default since
+  // it's an identity term that's also used neutrally, not inherently profanity:
   // 'gay',
 ];
 
+const HOMOGLYPHS = {
+  'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'х': 'x', 'у': 'y', 'к': 'k', 'м': 'm', 'т': 't', // Cyrillic
+  'α': 'a', 'ο': 'o', 'ρ': 'p', 'ε': 'e', 'κ': 'k', 'ι': 'i', // Greek
+};
+
+function replaceHomoglyphs(text) {
+  return text.replace(/./g, (ch) => HOMOGLYPHS[ch] || ch);
+}
+
 function normalize(text) {
   let result = text.toLowerCase();
+  result = replaceHomoglyphs(result);
   result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strips accents: é→e, ú→u, ï→i, ç→c, etc.
   result = result
     .replace(/[ßẞ]/g, 's')
@@ -54,8 +64,9 @@ function levenshtein(a, b) {
 }
 
 const NORMALIZED_LIST = BLOCKED_WORDS.map((w) => normalize(w));
-// Fuzzy matching (catches a single dropped/swapped letter, e.g. "fck" or "shyt") only applies
-// to words 5+ letters long — shorter words are excluded to avoid false positives like "pass" vs "ass".
+// Fuzzy matching (catches one dropped/swapped letter, e.g. "fck" or "shyt") only applies to
+// words 5+ letters long — shorter words stay exact-match-only to avoid false positives
+// (e.g. a 4-letter fuzzy check would flag innocent words like "duck" as close to "fuck").
 const FUZZY_LIST = NORMALIZED_LIST.filter((w) => w.length >= 5);
 
 function checkProfanity(rawText) {
@@ -78,7 +89,6 @@ function checkProfanity(rawText) {
     }
   }
 
-  // Catches letter-by-letter spacing bypass, e.g. "n i g g a"
   let run = [];
   for (const token of tokens) {
     const stripped = token.replace(/[^a-zA-Z0-9]/g, '');
