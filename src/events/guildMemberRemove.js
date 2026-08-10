@@ -2,12 +2,14 @@ const { Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discor
 const config = require('../config');
 const { THEME, baseEmbed } = require('../utils/embeds');
 const { updateMemberCountChannel } = require('../utils/memberCountManager');
+const { closeInviteRecord } = require('../database/db');
 
 module.exports = {
   name: Events.GuildMemberRemove,
   once: false,
   async execute(member) {
     updateMemberCountChannel(member.client).catch((err) => console.error('Member count update failed:', err));
+    closeInviteRecord(member.id);
 
     try {
       const userLogsChannel = await member.client.channels.fetch(config.channels.userLogs);

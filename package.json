@@ -16,7 +16,8 @@
     "post-ping-settings": "node scripts/post-ping-settings.js",
     "post-support-panel": "node scripts/post-support-panel.js",
     "post-level-info": "node scripts/post-level-info.js",
-    "setup-membercount-channel": "node scripts/setup-membercount-channel.js"
+    "setup-membercount-channel": "node scripts/setup-membercount-channel.js",
+    "setup-welcome-og-ping": "node scripts/setup-welcome-og-ping.js"
   },
   "engines": {
     "node": ">=18.0.0"

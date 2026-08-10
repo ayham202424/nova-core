@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getOrCreateUser, getWarns, getStaffStats } = require('../database/db');
+const { getOrCreateUser, getWarns, getStaffStats, getInviteStats } = require('../database/db');
 const { hasRank, RANKS, getRank, RANK_NAMES } = require('../utils/permissions');
 const { xpForNextLevel } = require('../utils/xpCurve');
 const { THEME, baseEmbed } = require('../utils/embeds');
@@ -20,12 +20,14 @@ module.exports = {
     const nextLevelXp = xpForNextLevel(user.level);
     const joinedText = targetMember?.joinedTimestamp ? `<t:${Math.floor(targetMember.joinedTimestamp / 1000)}:R>` : 'Unknown';
     const highestRoleName = targetMember ? RANK_NAMES[getRank(targetMember)] || 'Member' : 'Unknown';
+    const inviteStats = getInviteStats(targetUser.id);
 
     const fields = [
       { name: 'Level', value: `${user.level} (${user.xp}/${nextLevelXp} XP)`, inline: true },
       { name: 'Messages Sent', value: `${user.messages_total}`, inline: true },
       { name: 'Joined Server', value: joinedText, inline: true },
       { name: 'Highest Role', value: highestRoleName, inline: true },
+      { name: 'Invites', value: `${inviteStats.total} total (${inviteStats.stillHere} still here, ${inviteStats.left} left)`, inline: true },
     ];
 
     if (canSeeFull) {

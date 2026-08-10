@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const config = require('../config');
 const { THEME, baseEmbed } = require('../utils/embeds');
 
@@ -13,7 +13,9 @@ async function postFormattedListing(message) {
   const info = CATEGORY_INFO[message.channelId];
   if (!info) return;
 
-  const attachment = message.attachments.first();
+  const attachments = [...message.attachments.values()];
+  const images = attachments.filter((a) => a.contentType?.startsWith('image/'));
+  const others = attachments.filter((a) => !a.contentType?.startsWith('image/'));
   const rawContent = message.content?.trim();
 
   try {
@@ -28,7 +30,7 @@ async function postFormattedListing(message) {
     authorIcon: message.guild.iconURL({ size: 128 }) || undefined,
     title: 'New Listing',
     description: rawContent || '*No description provided.*',
-    image: attachment ? attachment.url : null,
+    image: images.length ? images[0].url : null,
   });
 
   const row = new ActionRowBuilder().addComponents(
@@ -39,7 +41,12 @@ async function postFormattedListing(message) {
       .setStyle(ButtonStyle.Success)
   );
 
-  await message.channel.send({ embeds: [embed], components: [row] });
+  const remainingFiles = [
+    ...images.slice(1).map((a) => new AttachmentBuilder(a.url, { name: a.name })),
+    ...others.map((a) => new AttachmentBuilder(a.url, { name: a.name })),
+  ];
+
+  await message.channel.send({ embeds: [embed], components: [row], files: remainingFiles });
 }
 
 module.exports = { postFormattedListing, CATEGORY_INFO };

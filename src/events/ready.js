@@ -4,6 +4,7 @@ const { startLeaderboardScheduler } = require('../handlers/leaderboardManager');
 const { initInviteCache } = require('../utils/inviteTracker');
 const { startGiveawayScheduler } = require('../utils/giveawayScheduler');
 const { updateMemberCountChannel } = require('../utils/memberCountManager');
+const { startTimerScheduler } = require('../utils/timerScheduler');
 
 module.exports = {
   name: Events.ClientReady,
@@ -12,6 +13,7 @@ module.exports = {
     console.log(`Nova Core is online as ${client.user.tag}`);
     startLeaderboardScheduler(client);
     startGiveawayScheduler(client);
+    startTimerScheduler(client);
 
     const guild = client.guilds.cache.get(config.guildId);
     if (guild) {

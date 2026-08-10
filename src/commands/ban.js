@@ -5,6 +5,7 @@ const { baseEmbed, THEME } = require('../utils/embeds');
 const { checkForAbuse } = require('../utils/abuseDetection');
 const { incrementBanCount } = require('../database/db');
 const { buildAppealRow } = require('../utils/moderationDM');
+const { getOwnerPingContent } = require('../utils/ownerPing');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -57,18 +58,21 @@ module.exports = {
 
     try {
       const logChannel = await interaction.client.channels.fetch(config.channels.cmdsLogs);
+      const { content: ownerContent, ownerId } = await getOwnerPingContent(interaction.guild);
       const logEmbed = baseEmbed(interaction.client, {
         color: THEME.colors.danger,
         authorName: targetUser.tag,
         authorIcon: targetUser.displayAvatarURL(),
         title: banned ? '🔨 Member Banned' : '⚠️ Ban Failed',
-        description:
-          `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}` +
-          (!dmSent ? `\n\n⚠️ Could not reach them — if they appeal through another means, use \`/submitappeal\`.` : ''),
+        description: `**User:** ${targetUser} (\`${targetUser.id}\`)\n**Moderator:** ${staffMember.user}\n**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
         fields: [{ name: 'Reason', value: reason }],
         image: proof ? proof.url : null,
       });
-      await logChannel.send({ embeds: [logEmbed] });
+      await logChannel.send({
+        content: ownerContent || undefined,
+        embeds: [logEmbed],
+        allowedMentions: ownerId ? { users: [ownerId] } : undefined,
+      });
     } catch (err) {
       console.error('Failed to log ban:', err);
     }

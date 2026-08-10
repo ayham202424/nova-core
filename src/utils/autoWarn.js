@@ -3,8 +3,10 @@ const { addWarn, getWarnStreak, getWarnCount, getWarns } = require('../database/
 const { getWarnLevel } = require('./warnLevels');
 const { formatDuration } = require('./duration');
 const { baseEmbed, THEME } = require('./embeds');
+const { getOwnerPingContent } = require('./ownerPing');
 
 const FLAG_MILESTONES = [3, 5, 8, 12];
+const OWNER_PING_THRESHOLD_MINUTES = 300; // 5 hours
 
 async function checkSuspiciousFlag(client, targetUser, totalWarns) {
   if (!FLAG_MILESTONES.includes(totalWarns)) return;
@@ -38,10 +40,10 @@ async function checkSuspiciousFlag(client, targetUser, totalWarns) {
   }
 }
 
-async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorId, reason, proofUrl }) {
+async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorId, reason, proofUrl, forcedLevel }) {
   const targetMember = await guild.members.fetch(targetUser.id).catch(() => null);
   const streak = getWarnStreak(targetUser.id);
-  const level = getWarnLevel(streak);
+  const level = forcedLevel || getWarnLevel(streak);
 
   addWarn({
     userId: targetUser.id,
@@ -82,6 +84,15 @@ async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorI
     dmSent = false;
   }
 
+  const ownerPingNeeded = level.timeoutMinutes > OWNER_PING_THRESHOLD_MINUTES;
+  let ownerPingContent = '';
+  let ownerId = null;
+  if (ownerPingNeeded) {
+    const result = await getOwnerPingContent(guild);
+    ownerPingContent = result.content;
+    ownerId = result.ownerId;
+  }
+
   try {
     const logChannel = await client.channels.fetch(config.channels.cmdsLogs);
     const logEmbed = baseEmbed(client, {
@@ -94,11 +105,16 @@ async function issueWarn({ client, guild, targetUser, moderatorLabel, moderatorI
         `**Issued by:** ${moderatorLabel}\n` +
         `**Timeout:** ${formatDuration(level.timeoutMinutes)} (${timeoutApplied ? 'applied ✅' : 'failed ❌'})\n` +
         `**Warning streak:** ${streak}\n` +
-        `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}`,
+        `**DM sent:** ${dmSent ? 'Yes ✅' : 'No ❌'}` +
+        (ownerPingNeeded ? '\n\n🚨 Severe timeout — owner notified.' : ''),
       fields: [{ name: 'Reason', value: reason }],
       image: proofUrl || null,
     });
-    await logChannel.send({ embeds: [logEmbed] });
+    await logChannel.send({
+      content: ownerPingContent || undefined,
+      embeds: [logEmbed],
+      allowedMentions: ownerId ? { users: [ownerId] } : undefined,
+    });
   } catch (err) {
     console.error('Failed to log warn:', err);
   }

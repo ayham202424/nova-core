@@ -30,6 +30,8 @@ const migrations = [
   "ALTER TABLE users ADD COLUMN bans_count INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN kicks_count INTEGER DEFAULT 0",
   "ALTER TABLE users ADD COLUMN invites_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN join_count INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN is_og_member INTEGER DEFAULT 0",
 ];
 for (const sql of migrations) {
   try {
@@ -206,6 +208,29 @@ db.exec(`
     giveaway_id INTEGER NOT NULL,
     user_id TEXT NOT NULL,
     entered_at TEXT NOT NULL
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invite_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inviter_id TEXT NOT NULL,
+    invited_id TEXT NOT NULL,
+    joined_at TEXT NOT NULL,
+    left_at TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS timers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    message_id TEXT,
+    title TEXT,
+    end_time TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    created_at TEXT NOT NULL
   );
 `);
 
@@ -621,6 +646,63 @@ function cancelGiveaway(giveawayId) {
   db.prepare("UPDATE giveaways SET status = 'cancelled' WHERE id = ?").run(giveawayId);
 }
 
+function incrementJoinCount(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET join_count = join_count + 1 WHERE user_id = ?').run(userId);
+  return db.prepare('SELECT join_count FROM users WHERE user_id = ?').get(userId).join_count;
+}
+
+function setOgMember(userId) {
+  getOrCreateUser(userId);
+  db.prepare('UPDATE users SET is_og_member = 1 WHERE user_id = ?').run(userId);
+}
+
+function isOgMember(userId) {
+  const user = getOrCreateUser(userId);
+  return Boolean(user.is_og_member);
+}
+
+function createInviteRecord(inviterId, invitedId) {
+  db.prepare('INSERT INTO invite_records (inviter_id, invited_id, joined_at) VALUES (?, ?, ?)').run(inviterId, invitedId, new Date().toISOString());
+}
+
+function closeInviteRecord(invitedId) {
+  db.prepare("UPDATE invite_records SET left_at = ? WHERE invited_id = ? AND left_at IS NULL").run(new Date().toISOString(), invitedId);
+}
+
+function getInviteStats(userId) {
+  const total = db.prepare('SELECT COUNT(*) as c FROM invite_records WHERE inviter_id = ?').get(userId).c;
+  const stillHere = db.prepare('SELECT COUNT(*) as c FROM invite_records WHERE inviter_id = ? AND left_at IS NULL').get(userId).c;
+  return { total, stillHere, left: total - stillHere };
+}
+
+function createTimer({ userId, channelId, title, endTime }) {
+  const info = db.prepare(
+    `INSERT INTO timers (user_id, channel_id, title, end_time, created_at) VALUES (?, ?, ?, ?, ?)`
+  ).run(userId, channelId, title || null, endTime, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function setTimerMessage(timerId, messageId) {
+  db.prepare('UPDATE timers SET message_id = ? WHERE id = ?').run(messageId, timerId);
+}
+
+function getActiveTimerByUser(userId) {
+  return db.prepare("SELECT * FROM timers WHERE user_id = ? AND status = 'active'").get(userId);
+}
+
+function getActiveTimers() {
+  return db.prepare("SELECT * FROM timers WHERE status = 'active'").all();
+}
+
+function getTimer(timerId) {
+  return db.prepare('SELECT * FROM timers WHERE id = ?').get(timerId);
+}
+
+function completeTimer(timerId) {
+  db.prepare("UPDATE timers SET status = 'completed' WHERE id = ?").run(timerId);
+}
+
 module.exports = {
   db,
   getOrCreateUser,
@@ -693,4 +775,16 @@ module.exports = {
   hasEnteredGiveaway,
   endGiveaway,
   cancelGiveaway,
+  incrementJoinCount,
+  setOgMember,
+  isOgMember,
+  createInviteRecord,
+  closeInviteRecord,
+  getInviteStats,
+  createTimer,
+  setTimerMessage,
+  getActiveTimerByUser,
+  getActiveTimers,
+  getTimer,
+  completeTimer,
 };
