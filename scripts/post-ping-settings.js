@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../src/config');
 const { THEME, baseEmbed } = require('../src/utils/embeds');
-const { PING_CATEGORIES } = require('../src/utils/pingCategories');
+const { getPingCategories } = require('../src/utils/pingCategories');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -23,6 +23,7 @@ client.once(Events.ClientReady, async () => {
   try {
     const channel = await client.channels.fetch(config.channels.pingSettings);
     await clearOldMessages(channel);
+    const categories = getPingCategories();
 
     const embed = baseEmbed(client, {
       color: THEME.colors.primary,
@@ -30,7 +31,7 @@ client.once(Events.ClientReady, async () => {
       description:
         "Choose exactly what you want to be pinged for. Click the button below to open your personal menu — " +
         "only you can see it, and it always shows exactly what's active for you right now.",
-      fields: PING_CATEGORIES.map((cat) => ({ name: `${cat.emoji} ${cat.label}`, value: 'Toggle in your personal menu', inline: true })),
+      fields: categories.map((cat) => ({ name: `${cat.emoji} ${cat.label}`, value: 'Toggle in your personal menu', inline: true })),
     });
 
     const row = new ActionRowBuilder().addComponents(

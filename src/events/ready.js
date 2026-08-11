@@ -5,6 +5,7 @@ const { initInviteCache } = require('../utils/inviteTracker');
 const { startGiveawayScheduler } = require('../utils/giveawayScheduler');
 const { updateMemberCountChannel } = require('../utils/memberCountManager');
 const { startTimerScheduler } = require('../utils/timerScheduler');
+const { startWeeklyHighlightScheduler } = require('../utils/weeklyHighlightScheduler');
 
 module.exports = {
   name: Events.ClientReady,
@@ -14,6 +15,7 @@ module.exports = {
     startLeaderboardScheduler(client);
     startGiveawayScheduler(client);
     startTimerScheduler(client);
+    startWeeklyHighlightScheduler(client);
 
     const guild = client.guilds.cache.get(config.guildId);
     if (guild) {

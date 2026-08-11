@@ -1,8 +1,9 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { THEME, baseEmbed } = require('../utils/embeds');
-const { PING_CATEGORIES } = require('../utils/pingCategories');
+const { getPingCategories } = require('../utils/pingCategories');
 
 function buildView(client, member) {
+  const categories = getPingCategories();
   const embed = baseEmbed(client, {
     color: THEME.colors.primary,
     title: '🔔 Your Ping Settings',
@@ -10,7 +11,7 @@ function buildView(client, member) {
   });
 
   const row = new ActionRowBuilder().addComponents(
-    PING_CATEGORIES.map((cat) => {
+    categories.map((cat) => {
       const active = Boolean(cat.roleId && member.roles.cache.has(cat.roleId));
       return new ButtonBuilder()
         .setCustomId(`pingtoggle_${cat.key}`)
@@ -30,7 +31,7 @@ async function handleOpenMenu(interaction) {
 
 async function handleToggle(interaction) {
   const key = interaction.customId.replace('pingtoggle_', '');
-  const category = PING_CATEGORIES.find((c) => c.key === key);
+  const category = getPingCategories().find((c) => c.key === key);
   if (!category || !category.roleId) {
     return interaction.reply({ content: 'This ping category is not configured.', ephemeral: true });
   }

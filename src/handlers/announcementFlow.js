@@ -8,7 +8,7 @@ const {
   AttachmentBuilder,
 } = require('discord.js');
 const { baseEmbed } = require('../utils/embeds');
-const { PING_CATEGORIES } = require('../utils/pingCategories');
+const { getPingCategories } = require('../utils/pingCategories');
 
 const COLOR_MAP = { blue: 0x3b82f6, green: 0x3ddc97, red: 0xe63950, yellow: 0xf5c451, purple: 0x8b5cf6 };
 const pending = new Map();
@@ -21,6 +21,8 @@ function cleanup() {
 }
 
 function buildComponents(data) {
+  const categories = getPingCategories();
+
   const channelRow = new ActionRowBuilder().addComponents(
     new ChannelSelectMenuBuilder()
       .setCustomId('announce_channel_select')
@@ -33,8 +35,8 @@ function buildComponents(data) {
       .setCustomId('announce_ping_select')
       .setPlaceholder(data.pingKeys.length ? `${data.pingKeys.length} ping role(s) selected ✓` : 'Select ping role(s) — optional')
       .setMinValues(0)
-      .setMaxValues(PING_CATEGORIES.length)
-      .addOptions(PING_CATEGORIES.map((c) => ({ label: c.label, value: c.key, emoji: c.emoji, default: data.pingKeys.includes(c.key) })))
+      .setMaxValues(categories.length)
+      .addOptions(categories.map((c) => ({ label: c.label, value: c.key, emoji: c.emoji, default: data.pingKeys.includes(c.key) })))
   );
 
   const buttonRow = new ActionRowBuilder().addComponents(
@@ -50,11 +52,12 @@ function buildComponents(data) {
 }
 
 function buildPreviewEmbed(client, data) {
+  const categories = getPingCategories();
   const channelText = data.channelId ? `<#${data.channelId}>` : '*not selected yet*';
   const pingText = data.pingEveryone
     ? '@everyone (override)'
     : data.pingKeys.length
-    ? data.pingKeys.map((k) => PING_CATEGORIES.find((c) => c.key === k)?.label).join(', ')
+    ? data.pingKeys.map((k) => categories.find((c) => c.key === k)?.label).join(', ')
     : '*none*';
   const attachmentsSummary =
     [data.bannerUrl ? 'Banner ✅' : null, data.videoUrl ? 'Video ✅' : null, data.fileUrl ? 'File ✅' : null].filter(Boolean).join(' · ') ||
@@ -155,13 +158,14 @@ async function handleSend(interaction) {
     return interaction.reply({ content: 'Could not find that channel — it may have been deleted.', ephemeral: true });
   }
 
+  const categories = getPingCategories();
   let content = '';
   let allowedMentions = { parse: [] };
   if (data.pingEveryone) {
     content = '@everyone';
     allowedMentions = { parse: ['everyone'] };
   } else if (data.pingKeys.length) {
-    const roleIds = data.pingKeys.map((k) => PING_CATEGORIES.find((c) => c.key === k)?.roleId).filter(Boolean);
+    const roleIds = data.pingKeys.map((k) => categories.find((c) => c.key === k)?.roleId).filter(Boolean);
     content = roleIds.map((id) => `<@&${id}>`).join(' ');
     allowedMentions = { roles: roleIds };
   }

@@ -30,6 +30,10 @@ module.exports = {
     levelUp: process.env.LEVEL_UP_CHANNEL_ID,
     levelInfo: process.env.LEVEL_INFO_CHANNEL_ID,
     banAppeals: process.env.BAN_APPEALS_CHANNEL_ID,
+    suggestionsThread: process.env.SUGGESTIONS_THREAD_CHANNEL_ID,
+    topSuggestion: process.env.TOP_SUGGESTION_CHANNEL_ID,
+    creationsThread: process.env.CREATIONS_THREAD_CHANNEL_ID,
+    creationOfWeek: process.env.CREATION_OF_WEEK_CHANNEL_ID,
   },
 
   roles: {
