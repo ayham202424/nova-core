@@ -1,5 +1,5 @@
 // Add more words directly here any time — normalization below covers all bypass variants automatically
-// (leetspeak, accented/special characters, homoglyphs, repeated letters, inserted punctuation, single dropped letters).
+// (leetspeak, accented/special characters, homoglyphs, excessive repeated letters, inserted punctuation, single dropped letters).
 const BLOCKED_WORDS = [
   'arse', 'arsehead', 'arsehole', 'ass', 'asshole',
   'bastard', 'bitch', 'bollocks', 'brotherfucker', 'bullshit',
@@ -47,7 +47,9 @@ function normalize(text) {
     .replace(/[7]/g, 't')
     .replace(/[.\-_*#+~]/g, '')
     .replace(/[^a-z\s]/g, '')
-    .replace(/(.)\1+/g, '$1');
+    // Only 3+ of the SAME letter in a row counts as bypass elongation (e.g. "fuuuuck").
+    // A normal double letter (like in "ass", "dummy", "bitch") is left completely alone.
+    .replace(/(.)\1{2,}/g, '$1');
   return result;
 }
 
@@ -64,9 +66,8 @@ function levenshtein(a, b) {
 }
 
 const NORMALIZED_LIST = BLOCKED_WORDS.map((w) => normalize(w));
-// Fuzzy matching (catches one dropped/swapped letter, e.g. "fck" or "shyt") only applies to
-// words 5+ letters long — shorter words stay exact-match-only to avoid false positives
-// (e.g. a 4-letter fuzzy check would flag innocent words like "duck" as close to "fuck").
+// Fuzzy matching (catches one dropped/swapped letter) only applies to words 5+ letters long —
+// shorter words stay exact-match-only to avoid false positives (e.g. "duck" vs "fuck").
 const FUZZY_LIST = NORMALIZED_LIST.filter((w) => w.length >= 5);
 
 function checkProfanity(rawText) {
@@ -89,6 +90,7 @@ function checkProfanity(rawText) {
     }
   }
 
+  // Catches letter-by-letter spacing bypass, e.g. "n i g g a"
   let run = [];
   for (const token of tokens) {
     const stripped = token.replace(/[^a-zA-Z0-9]/g, '');
