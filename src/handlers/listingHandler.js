@@ -9,14 +9,25 @@ const CATEGORY_INFO = {
   [config.channels.animations]: { label: 'Animation', emoji: '🎬' },
 };
 
+const URL_REGEX = /https?:\/\/[^\s]+/gi;
+
+async function urlToAttachment(url, name) {
+  const response = await fetch(url);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return new AttachmentBuilder(buffer, { name });
+}
+
 async function postFormattedListing(message) {
   const info = CATEGORY_INFO[message.channelId];
   if (!info) return;
 
-  const attachments = [...message.attachments.values()];
-  const images = attachments.filter((a) => a.contentType?.startsWith('image/'));
-  const others = attachments.filter((a) => !a.contentType?.startsWith('image/'));
-  const rawContent = message.content?.trim();
+  const rawAttachments = [...message.attachments.values()];
+  const images = rawAttachments.filter((a) => a.contentType?.startsWith('image/'));
+  const videos = rawAttachments.filter((a) => a.contentType?.startsWith('video/'));
+  const others = rawAttachments.filter((a) => !a.contentType?.startsWith('image/') && !a.contentType?.startsWith('video/'));
+
+  const rawContent = message.content?.trim() || '';
+  const urlsInText = rawContent.match(URL_REGEX) || [];
 
   try {
     await message.delete();
@@ -41,12 +52,16 @@ async function postFormattedListing(message) {
       .setStyle(ButtonStyle.Success)
   );
 
-  const remainingFiles = [
-    ...images.slice(1).map((a) => new AttachmentBuilder(a.url, { name: a.name })),
-    ...others.map((a) => new AttachmentBuilder(a.url, { name: a.name })),
-  ];
+  const filesToAttach = [...images.slice(1), ...videos, ...others];
+  const files = await Promise.all(filesToAttach.map((a) => urlToAttachment(a.url, a.name).catch(() => null)));
+  const validFiles = files.filter(Boolean);
 
-  await message.channel.send({ embeds: [embed], components: [row], files: remainingFiles });
+  // Post any plain links (YouTube, Streamable, etc.) as real message content
+  // so Discord generates its own native video/link preview — this cannot happen
+  // if the link only sits inside an embed's description.
+  const linkContent = urlsInText.length ? urlsInText.join('\n') : undefined;
+
+  await message.channel.send({ content: linkContent, embeds: [embed], components: [row], files: validFiles });
 }
 
 module.exports = { postFormattedListing, CATEGORY_INFO };

@@ -2,8 +2,6 @@ const config = require('../config');
 const { getBotState, setBotState } = require('../database/db');
 const { THEME, baseEmbed } = require('./embeds');
 
-const MIN_UPDATE_INTERVAL_MS = 10 * 1000; // light debounce so mass join/leave bursts don't spam edits
-
 async function updateMemberCountChannel(client) {
   const channelId = getBotState('member_count_channel_id');
   const messageId = getBotState('member_count_message_id');
@@ -17,10 +15,6 @@ async function updateMemberCountChannel(client) {
   const newPeak = Math.max(currentCount, storedPeak);
   if (newPeak !== storedPeak) setBotState('member_count_peak', newPeak);
 
-  const lastUpdate = parseInt(getBotState('member_count_last_update') || '0', 10);
-  const now = Date.now();
-  if (now - lastUpdate < MIN_UPDATE_INTERVAL_MS) return;
-
   try {
     const channel = await guild.channels.fetch(channelId);
     const message = await channel.messages.fetch(messageId);
@@ -32,7 +26,7 @@ async function updateMemberCountChannel(client) {
     });
 
     await message.edit({ embeds: [embed] });
-    setBotState('member_count_last_update', now);
+    setBotState('member_count_last_update', Date.now());
   } catch (err) {
     console.error('Failed to update member count message:', err);
   }

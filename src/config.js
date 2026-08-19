@@ -34,6 +34,7 @@ module.exports = {
     topSuggestion: process.env.TOP_SUGGESTION_CHANNEL_ID,
     creationsThread: process.env.CREATIONS_THREAD_CHANNEL_ID,
     creationOfWeek: process.env.CREATION_OF_WEEK_CHANNEL_ID,
+    rules: process.env.RULES_CHANNEL_ID,
   },
 
   roles: {

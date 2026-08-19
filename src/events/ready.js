@@ -25,6 +25,6 @@ module.exports = {
     updateMemberCountChannel(client).catch((err) => console.error('Initial member count update failed:', err));
     setInterval(() => {
       updateMemberCountChannel(client).catch((err) => console.error('Member count update failed:', err));
-    }, 3 * 60 * 1000);
+    }, 60 * 1000);
   },
 };

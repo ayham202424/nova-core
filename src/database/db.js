@@ -2,7 +2,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { MAX_LEVEL, xpForNextLevel } = require('../utils/xpCurve');
 
-const db = new Database(path.join(__dirname, '../../nova-core.db'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../nova-core.db');
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
